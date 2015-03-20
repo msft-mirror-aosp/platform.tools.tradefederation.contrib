@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2013 Google Inc. All Rights Reserved -->
+<configuration description="Runs media stress tests">
+    <option name="test-tag" value="camera_native_test" />
+
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="run-command" value="stop media"/>
+    </target_preparer>
+
+    <test class="com.android.tradefed.testtype.GTest">
+        <option name="module-name" value="camera2_test" />
+    </test>
+</configuration>

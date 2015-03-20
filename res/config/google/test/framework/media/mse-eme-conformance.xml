@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2014 Google Inc. All Rights Reserved -->
+<configuration description="Run MSE-EME conformance test on device and get results">
+    <option name="test-tag" value="mse-eme-conformance" />
+
+    <test class="com.google.android.apps.mediashell.CastReceiverTestRunner">
+        <option name="run-name" value="mse-eme-conformance" />
+        <option name="url-param" key="command" value="run" />
+        <option name="url-param" key="timeout" value="30000" />
+        <option name="test-count" value="70" />
+        <option name="testrun-timeout" value="300" />
+    </test>
+</configuration>

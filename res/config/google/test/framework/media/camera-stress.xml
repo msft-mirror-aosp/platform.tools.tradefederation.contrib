@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2011 Google Inc. All Rights Reserved -->
+<configuration description="Runs media stress tests">
+    <option name="test-tag" value="camera_stress" />
+
+    <!-- com.android.tradefed.targetprep.TestAppInstallSetup -->
+    <option name="tests-zip-app:test-file-name" value="GoogleCameraTests.apk" />
+
+    <test class="com.android.media.tests.CameraStressTest" />
+</configuration>

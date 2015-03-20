@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2014 Google Inc. All Rights Reserved -->
+<configuration description="Run Video Multimeter test on device and get results">
+    <option name="test-tag" value="VideoMultimeter" />
+
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
+    <option name="google-device-setup:audio-silent" value="false"/>
+    <option name="google-device-setup:setting" key="dim_screen" value="0" />
+    <option name="google-device-setup:setting" key="screen_brightness" value="230"/>
+    <option name="google-device-setup:setting" key="volume_music_speaker" value="12"/>
+    <option name="google-device-setup:setting" key="accelerometer_rotation" value="0" />
+
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/multimeter/video_calibration.mp4->/sdcard/DCIM/Camera/video_cali.mp4" />
+        <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/multimeter/video_1080p_30fps_10min_bbb.mp4->/sdcard/DCIM/Camera/video.mp4" />
+        <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/multimeter/video_720p_60fps_4min_mountham.mp4->/sdcard/DCIM/Camera/video2.mp4" />
+    </target_preparer>
+
+    <test class="com.android.media.tests.VideoMultimeterTest">
+        <option name="multimeter-util-path" value="/google/data/ro/teams/tradefed/testdata/media/multimeter/optofi.sh" />
+    </test>
+</configuration>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2011 Google Inc. All Rights Reserved -->
+<configuration description="Runs media stress tests">
+    <option name="test-tag" value="camera_latency" />
+
+    <!-- com.android.tradefed.targetprep.TestAppInstallSetup -->
+    <option name="tests-zip-app:test-file-name" value="GoogleCameraTests.apk" />
+
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/com.google.android.GoogleCamera_media.xml->/data/data/com.google.android.GoogleCamera/shared_prefs/com.google.android.GoogleCamera_media.xml" />
+        <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/com.google.android.GoogleCamera_preferences_camera_0.xml->/data/data/com.google.android.GoogleCamera/shared_prefs/com.google.android.GoogleCamera_preferences_camera_0.xml" />
+        <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/com.google.android.GoogleCamera_preferences.xml->/data/data/com.google.android.GoogleCamera/shared_prefs/com.google.android.GoogleCamera_preferences.xml" />
+    </target_preparer>
+
+    <test class="com.android.media.tests.CameraLatencyTest" />
+</configuration>
