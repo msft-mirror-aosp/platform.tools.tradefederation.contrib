@@ -3,8 +3,8 @@
 <configuration description="Runs media player stress tests">
     <option name="test-tag" value="media_player_stress" />
 
-    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
-    <option name="google-device-setup:secure-setting" key="screensaver_enabled" value="0" />
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
+    <option name="device-setup-2:screen-saver" value="off" />
 
     <!-- com.android.tradefed.targetprep.TestAppInstallSetup -->
     <option name="tests-zip-app:test-file-name" value="mediaframeworktest.apk" />

@@ -3,9 +3,9 @@
 <configuration description="Runs audio functional tests">
     <option name="test-tag" value="media_audio" />
 
-    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
-    <option name="google-device-setup:local-data-path" value="/google/data/ro/teams/tradefed/testdata/media/media_api/" />
-    <option name="google-device-setup:secure-setting" key="screensaver_enabled" value="0" />
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
+    <option name="device-setup-2:screen-saver" value="off" />
+    <option name="device-setup-2:local-data-path" value="/google/data/ro/teams/tradefed/testdata/media/media_api/" />
 
     <!-- com.android.tradefed.targetprep.TestAppInstallSetup -->
     <option name="tests-zip-app:test-file-name" value="mediaframeworktest.apk" />

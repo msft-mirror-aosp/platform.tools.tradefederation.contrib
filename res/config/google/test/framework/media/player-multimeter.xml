@@ -3,12 +3,12 @@
 <configuration description="Run Video Multimeter test on device and get results">
     <option name="test-tag" value="VideoMultimeter" />
 
-    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
-    <option name="google-device-setup:audio-silent" value="false"/>
-    <option name="google-device-setup:setting" key="dim_screen" value="0" />
-    <option name="google-device-setup:setting" key="screen_brightness" value="230"/>
-    <option name="google-device-setup:setting" key="volume_music_speaker" value="12"/>
-    <option name="google-device-setup:setting" key="accelerometer_rotation" value="0" />
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
+    <option name="device-setup-2:screen-adaptive-brightness" value="off"/>
+    <option name="device-setup-2:screen-brightness" value="230" />
+    <option name="device-setup-2:auto-rotate" value="off" />
+    <option name="device-setup-2:disable-audio" value="false" />
+    <!-- TODO: Figure out how to turn volume up -->
 
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
         <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/multimeter/video_calibration.mp4->/sdcard/DCIM/Camera/video_cali.mp4" />
