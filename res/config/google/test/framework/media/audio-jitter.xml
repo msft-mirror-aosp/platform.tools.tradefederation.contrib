@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2014 Google Inc. All Rights Reserved -->
+<configuration description="Run audio jitter tests">
+    <option name="test-tag" value="AudioJitter" />
+
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
+    <option name="device-setup-2:disable-audio" value="false"/>
+    <option name="device-setup-2:screen-saver" value="off"/>
+
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
+        <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/sljitter->/data/local/tmp/sljitter" />
+    </target_preparer>
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer" >
+        <option name="run-command" value="chmod 755 /data/local/tmp/sljitter" />
+    </target_preparer>
+
+    <test class="com.android.media.tests.AudioJitterTest" />
+</configuration>
