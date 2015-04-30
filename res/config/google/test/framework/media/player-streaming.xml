@@ -3,9 +3,9 @@
 <configuration description="Runs media player streaming tests">
     <option name="test-tag" value="media_player_streaming" />
 
-    <!-- com.android.tradefed.targetprep.TestAppInstallSetup -->
-    <option name="tests-zip-app:test-file-name" value="mediaframeworktest.apk" />
-
+    <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
+        <option name="test-file-name" value="mediaframeworktest.apk" />
+    </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
         <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/media_api/streaming.txt->/sdcard/media_api/streaming.txt" />
     </target_preparer>

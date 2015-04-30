@@ -3,8 +3,9 @@
 <configuration description="Runs media stress tests">
     <option name="test-tag" value="camera_stress" />
 
-    <!-- com.android.tradefed.targetprep.TestAppInstallSetup -->
-    <option name="tests-zip-app:test-file-name" value="GoogleCameraTests.apk" />
+    <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
+        <option name="test-file-name" value="GoogleCameraTests.apk" />
+    </target_preparer>
 
     <test class="com.android.media.tests.CameraStressTest" />
 </configuration>

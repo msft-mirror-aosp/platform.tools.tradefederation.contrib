@@ -6,8 +6,9 @@
     <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
     <option name="device-setup-2:local-data-path" value="/google/data/ro/teams/tradefed/testdata/media/media_api/" />
 
-    <!-- com.android.tradefed.targetprep.TestAppInstallSetup -->
-    <option name="tests-zip-app:test-file-name" value="mediaframeworktest.apk" />
+    <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
+        <option name="test-file-name" value="mediaframeworktest.apk" />
+    </target_preparer>
 
     <test class="com.android.media.tests.MediaMemoryTest" />
 </configuration>

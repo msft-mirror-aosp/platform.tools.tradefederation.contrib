@@ -3,8 +3,9 @@
 <configuration description="Runs camera pairwise tests">
     <option name="test-tag" value="camera_pairwise_test" />
 
-    <!-- com.android.tradefed.targetprep.TestAppInstallSetup -->
-    <option name="tests-zip-app:test-file-name" value="mediaframeworktest.apk" />
+    <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
+        <option name="test-file-name" value="mediaframeworktest.apk" />
+    </target_preparer>
 
     <test class="com.android.tradefed.testtype.InstrumentationTest">
         <option name="class" value="com.android.mediaframeworktest.functional.camera.CameraPairwiseTest" />
