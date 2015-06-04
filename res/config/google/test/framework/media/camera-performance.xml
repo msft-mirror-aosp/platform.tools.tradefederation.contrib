@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2015 Google Inc. All Rights Reserved -->
+<configuration description="Runs a Camera2 Performance CTS test on device">
+    <option name="test-tag" value="camera_framework_performance" />
+    <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
+        <option name="test-file-name" value="CtsHardwareTestCases.apk" />
+    </target_preparer>
+    <test class="com.android.media.tests.CameraPerformanceTest" />
+</configuration>
