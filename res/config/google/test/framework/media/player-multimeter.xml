@@ -3,11 +3,11 @@
 <configuration description="Run Video Multimeter test on device and get results">
     <option name="test-tag" value="VideoMultimeter" />
 
-    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
-    <option name="device-setup-2:screen-adaptive-brightness" value="off"/>
-    <option name="device-setup-2:screen-brightness" value="230" />
-    <option name="device-setup-2:auto-rotate" value="off" />
-    <option name="device-setup-2:disable-audio" value="false" />
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
+    <option name="google-device-setup:screen-adaptive-brightness" value="off"/>
+    <option name="google-device-setup:screen-brightness" value="230" />
+    <option name="google-device-setup:auto-rotate" value="off" />
+    <option name="google-device-setup:disable-audio" value="false" />
     <!-- TODO: Figure out how to turn volume up -->
 
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">

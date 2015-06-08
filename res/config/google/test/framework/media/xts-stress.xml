@@ -3,8 +3,8 @@
 <configuration description="Runs xts stress tests">
     <option name="test-tag" value="xts_stress_test" />
 
-    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
-    <option name="device-setup-2:screen-saver" value="off" />
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
+    <option name="google-device-setup:screen-saver" value="off" />
 
     <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup">
         <option name="apk-path" value="/google/data/ro/teams/tradefed/testdata/media/DrmMediaTests.apk" />

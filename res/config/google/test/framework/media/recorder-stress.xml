@@ -3,8 +3,8 @@
 <configuration description="Runs media stress tests">
     <option name="test-tag" value="media_stress" />
 
-    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
-    <option name="device-setup-2:local-data-path" value="/google/data/ro/teams/tradefed/testdata/media/media_api/" />
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
+    <option name="google-device-setup:local-data-path" value="/google/data/ro/teams/tradefed/testdata/media/media_api/" />
 
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
         <option name="test-file-name" value="mediaframeworktest.apk" />

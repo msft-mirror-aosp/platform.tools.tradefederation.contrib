@@ -3,9 +3,9 @@
 <configuration description="Run audio jitter tests">
     <option name="test-tag" value="AudioJitter" />
 
-    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
-    <option name="device-setup-2:disable-audio" value="false"/>
-    <option name="device-setup-2:screen-saver" value="off"/>
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
+    <option name="google-device-setup:disable-audio" value="false"/>
+    <option name="google-device-setup:screen-saver" value="off"/>
 
     <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer">
         <option name="push" value="/google/data/ro/teams/tradefed/testdata/media/sljitter->/data/local/tmp/sljitter" />
