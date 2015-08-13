@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright 2015 Google Inc. All Rights Reserved -->
-<configuration description="Runs a Camera stress test on device">
+<configuration description="Runs a Camera App startup test on device">
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup" />
     <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup" />
-    <test class="com.android.media.tests.Camera2StressTest"/>
+    <test class="com.android.media.tests.CameraStartupTest"/>
 </configuration>
