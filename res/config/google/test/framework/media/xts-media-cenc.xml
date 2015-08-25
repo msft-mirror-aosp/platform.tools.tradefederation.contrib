@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration description="Runs xts media tests">
+    <option name="device-launch-control:test-tag" value="xts_media_test" />
+
+    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
+    <option name="google-device-setup:screen-saver" value="off" />
+
+    <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup">
+        <option name="apk-path" value="/google/data/ro/teams/tradefed/testdata/media/XtsMediaTestCases.apk" />
+    </target_preparer>
+
+    <test class="com.android.tradefed.testtype.InstrumentationTest">
+        <option name="class" value="com.google.android.xts.media.MediaCodecCencTest" />
+        <option name="package" value="com.google.android.xts.media" />
+        <option name="runner" value="android.test.InstrumentationTestRunner" />
+        <option name="run-name" value="xts_media_test" />
+        <option name="timeout" value="2000000" />
+        <option name="bugreport-on-failure" value="EACH" />
+    </test>
+</configuration>
