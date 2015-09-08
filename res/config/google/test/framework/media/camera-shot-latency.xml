@@ -3,5 +3,6 @@
 <configuration description="Runs a Camera app latency test on device">
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup" />
     <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup" />
-    <test class="com.android.media.tests.CameraDevicePerformanceTest"/>
+    <target_preparer class="com.android.tradefed.targetprep.DeviceCleaner" />
+    <test class="com.android.media.tests.CameraShotLatencyTest"/>
 </configuration>
