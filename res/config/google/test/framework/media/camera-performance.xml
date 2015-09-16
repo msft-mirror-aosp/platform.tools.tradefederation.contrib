@@ -2,6 +2,12 @@
 <!-- Copyright 2015 Google Inc. All Rights Reserved -->
 <configuration description="Runs a Camera2 Performance CTS test on device">
     <option name="test-tag" value="camera_framework_performance" />
+
+    <!-- Wait for 20 mins to let the device cool down -->
+    <target_preparer class="com.android.tradefed.targetprep.TimeWaster">
+        <option name="delay" value="1200000" />
+    </target_preparer>
+
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup">
         <option name="test-file-name" value="CtsHardwareTestCases.apk" />
     </target_preparer>
