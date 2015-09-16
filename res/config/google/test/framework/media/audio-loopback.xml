@@ -6,13 +6,10 @@
     <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup2 -->
     <option name="google-device-setup:disable-audio" value="false"/>
     <option name="google-device-setup:screen-saver" value="off"/>
+    <option name="google-device-setup:setprop" value="audio.safemedia.bypass=1"/>
 
     <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup">
         <option name="apk-path" value="/google/data/ro/teams/tradefed/testdata/media/apps/Loopback.apk" />
-    </target_preparer>
-
-    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer" >
-        <option name="run-command" value="setprop audio.safemedia.bypass 1" />
     </target_preparer>
 
     <test class="com.android.media.tests.AudioLoopbackTest" />
