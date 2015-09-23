@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright 2015 Google Inc. All Rights Reserved -->
 <configuration description="Runs a Camera App startup test on device">
-    <!-- Wait for 20 mins to let the device cool down -->
-    <target_preparer class="com.android.tradefed.targetprep.TimeWaster">
-        <option name="delay" value="1200000" />
-    </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup" />
     <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup" />
+    <target_preparer class="com.android.tradefed.targetprep.TemperatureThrottlingWaiter" />
     <test class="com.android.media.tests.CameraStartupTest"/>
 </configuration>
