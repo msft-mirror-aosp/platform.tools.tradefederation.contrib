@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2015 Google Inc. All Rights Reserved -->
+<!-- Required options: branch build-flavor -->
+<configuration description="Downloads build, flashes on device, and runs Widevine Modular DRM tests">
+    <include name="google/test/framework/media/widevine-base" />
+    <option name="device-launch-control:test-tag" value="widevineLibwvdrmmediacrypto" />
+    <target_preparer class="com.android.tradefed.targetprep.TestFilePushSetup">
+        <option name="test-file-name" value="bin/libwvdrmmediacrypto_test" />
+    </target_preparer>
+    <test class="com.android.tradefed.testtype.GTest">
+        <option name="native-test-device-path" value="/data/bin" />
+        <option name="module-name" value="libwvdrmmediacrypto_test" />
+    </test>
+</configuration>
