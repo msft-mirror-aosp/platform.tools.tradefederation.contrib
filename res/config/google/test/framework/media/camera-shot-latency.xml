@@ -4,6 +4,7 @@
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup" />
     <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup" />
     <target_preparer class="com.android.tradefed.targetprep.DeviceCleaner" />
+    <target_preparer class="com.android.tradefed.targetprep.TimeWaster" />
     <target_preparer class="com.android.tradefed.targetprep.TemperatureThrottlingWaiter" />
     <test class="com.android.media.tests.CameraShotLatencyTest"/>
 </configuration>
