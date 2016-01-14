@@ -8,7 +8,7 @@
     </target_preparer>
     <test class="com.android.tradefed.testtype.GTest">
         <option name="native-test-device-path" value="/data/bin" />
-        <option name="before-test-cmd" value="export LD_LIBRARY_PATH=/system/vendor/lib/mediadrm/" />
         <option name="module-name" value="libwvdrmengine_test" />
+        <option name="ld-library-path" value="/system/vendor/lib/mediadrm" />
     </test>
 </configuration>
