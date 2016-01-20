@@ -9,5 +9,7 @@
     <test class="com.android.tradefed.testtype.GTest">
         <option name="native-test-device-path" value="/data/bin" />
         <option name="module-name" value="max_res_engine_unittest" />
+        <option name="before-test-cmd" value="pm disable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService" />
+        <option name="after-test-cmd" value="pm enable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService" />
     </test>
 </configuration>
