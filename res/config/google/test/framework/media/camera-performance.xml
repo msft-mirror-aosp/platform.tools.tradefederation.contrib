@@ -6,6 +6,7 @@
         <option name="test-file-name" value="CtsCameraTestCases.apk" />
     </target_preparer>
     <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup" />
+    <target_preparer class="com.android.tradefed.targetprep.TimeWaster" />
     <target_preparer class="com.android.tradefed.targetprep.TemperatureThrottlingWaiter" />
     <test class="com.android.media.tests.CameraPerformanceTest">
         <option name="test-package" value="android.camera.cts" />
