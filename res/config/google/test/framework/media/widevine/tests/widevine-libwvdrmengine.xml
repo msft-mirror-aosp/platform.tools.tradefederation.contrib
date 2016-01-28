@@ -10,5 +10,7 @@
         <option name="native-test-device-path" value="/data/bin" />
         <option name="module-name" value="libwvdrmengine_test" />
         <option name="ld-library-path" value="/system/vendor/lib/mediadrm" />
+        <option name="before-test-cmd" value="pm disable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService" />
+        <option name="after-test-cmd" value="pm enable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService" />
     </test>
 </configuration>
