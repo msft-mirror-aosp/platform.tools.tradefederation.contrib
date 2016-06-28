@@ -20,5 +20,5 @@
 
     <include name="google/test/framework/media/widevine/reporters/widevine-reporter" />
 
-    <template-include name="reporters" default="google/template/reporters/empty" />
+    <template-include name="reporters" default="empty" />
 </configuration>
