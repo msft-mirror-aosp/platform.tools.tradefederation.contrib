@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright 2012 Google Inc. All Rights Reserved -->
 <configuration description="Runs xts media tests">
-    <option name="device-launch-control:test-tag" value="xts_media_test" />
+    <option name="test-tag" value="xts_media_test" />
 
     <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
     <option name="google-device-setup:screen-saver" value="off" />
