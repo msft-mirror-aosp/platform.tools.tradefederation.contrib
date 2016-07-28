@@ -2,7 +2,7 @@
 <!-- Copyright 2015 Google Inc. All Rights Reserved -->
 <!-- Required options: branch build-flavor -->
 <configuration description="Downloads build, flashes on device, and runs Widevine Modular DRM tests">
-    <option name="device-launch-control:test-tag" value="widevineFileStoreUnit" />
+    <option name="test-tag" value="widevineFileStoreUnit" />
     <target_preparer class="com.android.tradefed.targetprep.TestFilePushSetup">
         <option name="test-file-name" value="bin/file_store_unittest" />
     </target_preparer>

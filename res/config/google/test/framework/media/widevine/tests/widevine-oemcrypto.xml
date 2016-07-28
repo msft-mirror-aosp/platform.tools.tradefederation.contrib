@@ -2,7 +2,7 @@
 <!-- Copyright 2015 Google Inc. All Rights Reserved -->
 <!-- Required options: branch build-flavor -->
 <configuration description="Downloads build, flashes on device, and runs Widevine Modular DRM tests">
-    <option name="device-launch-control:test-tag" value="widevineOemcrypto" />
+    <option name="test-tag" value="widevineOemcrypto" />
     <target_preparer class="com.android.tradefed.targetprep.TestFilePushSetup">
         <option name="test-file-name" value="bin/oemcrypto_test" />
     </target_preparer>

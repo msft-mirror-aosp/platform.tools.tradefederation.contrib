@@ -2,7 +2,7 @@
 <!-- Copyright 2015 Google Inc. All Rights Reserved -->
 <!-- Required options: branch build-flavor -->
 <configuration description="Downloads build, flashes on device, and runs Widevine Modular DRM tests">
-    <option name="device-launch-control:test-tag" value="widevineCdmEngine" />
+    <option name="test-tag" value="widevineCdmEngine" />
     <target_preparer class="com.android.tradefed.targetprep.TestFilePushSetup">
         <option name="test-file-name" value="bin/cdm_engine_test" />
     </target_preparer>
