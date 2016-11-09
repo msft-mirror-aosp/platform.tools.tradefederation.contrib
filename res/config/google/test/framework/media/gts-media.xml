@@ -14,7 +14,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -23,7 +24,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -32,7 +34,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -41,7 +44,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -50,7 +54,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -59,7 +64,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -68,7 +74,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -77,7 +84,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -86,7 +94,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -95,7 +104,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -104,7 +114,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 
@@ -113,7 +124,8 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
-        <option name="timeout" value="2000000" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
         <option name="bugreport-on-failure" value="EACH" />
     </test>
 </configuration>
