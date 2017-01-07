@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright 2014 Google Inc. All Rights Reserved -->
-<configuration description="Runs media stress tests">
-    <option name="test-tag" value="camera_metadata_tests" />
-
-    <test class="com.android.tradefed.testtype.GTest">
-        <option name="module-name" value="camera_metadata_tests" />
-    </test>
-</configuration>
