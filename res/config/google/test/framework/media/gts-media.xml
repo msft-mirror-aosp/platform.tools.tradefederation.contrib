@@ -10,7 +10,37 @@
     </target_preparer>
 
     <test class="com.android.tradefed.testtype.InstrumentationTest">
+        <option name="class" value="com.google.android.media.gts.DecoderMetricsTests" />
+        <option name="package" value="com.google.android.media.gts" />
+        <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
+        <option name="run-name" value="xts_media_test" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
+        <option name="bugreport-on-failure" value="EACH" />
+    </test>
+
+    <test class="com.android.tradefed.testtype.InstrumentationTest">
+        <option name="class" value="com.google.android.media.gts.DrmSessionManagerTest" />
+        <option name="package" value="com.google.android.media.gts" />
+        <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
+        <option name="run-name" value="xts_media_test" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
+        <option name="bugreport-on-failure" value="EACH" />
+    </test>
+
+    <test class="com.android.tradefed.testtype.InstrumentationTest">
         <option name="class" value="com.google.android.media.gts.MediaCodecCencTest" />
+        <option name="package" value="com.google.android.media.gts" />
+        <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
+        <option name="run-name" value="xts_media_test" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
+        <option name="bugreport-on-failure" value="EACH" />
+    </test>
+
+    <test class="com.android.tradefed.testtype.InstrumentationTest">
+        <option name="class" value="com.google.android.media.gts.MediaCodecStressTest" />
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
@@ -41,6 +71,26 @@
 
     <test class="com.android.tradefed.testtype.InstrumentationTest">
         <option name="class" value="com.google.android.media.gts.MediaPlayerTest" />
+        <option name="package" value="com.google.android.media.gts" />
+        <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
+        <option name="run-name" value="xts_media_test" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
+        <option name="bugreport-on-failure" value="EACH" />
+    </test>
+
+    <test class="com.android.tradefed.testtype.InstrumentationTest">
+        <option name="class" value="com.google.android.media.gts.Vp8CodecTest" />
+        <option name="package" value="com.google.android.media.gts" />
+        <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
+        <option name="run-name" value="xts_media_test" />
+        <option name="shell-timeout" value="2000000" />
+        <option name="test-timeout" value="600000" />
+        <option name="bugreport-on-failure" value="EACH" />
+    </test>
+
+    <test class="com.android.tradefed.testtype.InstrumentationTest">
+        <option name="class" value="com.google.android.media.gts.WidevineCodecStressTests" />
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
