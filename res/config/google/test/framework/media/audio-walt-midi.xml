@@ -10,7 +10,7 @@
     <option name="test-tag" value="AudioWalt" />
 
     <test class="com.google.android.media.tests.AudioWaltTest">
-        <option name="switch-script-path" value="/google/data/ro/teams/tradefed/testdata/media/scripts/walt-switch.py"/>
+        <option name="tigertail-path" value="/google/data/ro/teams/tradefed/testdata/media/scripts/tigertail/tigertail_tool/tigertool.py" />
         <option name="permission-script-path" value="/google/data/ro/teams/tradefed/testdata/media/scripts/walt-permission.sh"/>
         <option name="test-type" value="MidiIn"/>
         <option name="fields" value="time_to_midi,time_total"/>
