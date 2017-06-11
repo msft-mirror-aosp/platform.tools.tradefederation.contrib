@@ -13,16 +13,7 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<!-- TODO: Delete when real configs make it here. -->
-<configuration description="Example test config.">
-    <!-- Some option for the whole configuration. -->
-    <option name="test-tag" value="example-test" />
-
-    <!-- Example test that will be ran. -->
-    <test class="com.android.tradefed.ExampleTest" />
-
-    <!-- Example target preparer used. -->
-    <target_preparer class="com.android.tradefed.targetprep.ExampleTargetPreparer" />
-
+<configuration description="Config for reboot test.">
+    <test class="com.android.example.RebootTest"/>
+    <option name="num-of-reboots" value="2"/>
 </configuration>
-
