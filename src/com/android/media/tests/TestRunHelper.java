@@ -39,18 +39,19 @@ public class TestRunHelper {
         return mTestStopTime - mTestStartTime;
     }
 
-    public void reportFailure(String errMsg) {
+    public void reportFailure(String errMsg) throws TestFailureException {
         CLog.e(errMsg);
+        mListener.testRunFailed(errMsg);
         mListener.testFailed(mTestId, errMsg);
         mListener.testEnded(mTestId, new HashMap<String, String>());
-        mListener.testRunFailed(errMsg);
+        throw new TestFailureException();
     }
 
     /** @param resultDictionary */
     public void endTest(Map<String, String> resultDictionary) {
         mTestStopTime = System.currentTimeMillis();
-        mListener.testEnded(mTestId, resultDictionary);
         mListener.testRunEnded(getTotalTestTime(), resultDictionary);
+        mListener.testEnded(mTestId, resultDictionary);
     }
 
     public void startTest(int numberOfTests) {

@@ -19,6 +19,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 import com.android.ddmlib.NullOutputReceiver;
 import com.android.ddmlib.testrunner.TestIdentifier;
+import com.android.media.tests.AudioLoopbackImageAnalyzer.Result;
 import com.android.media.tests.AudioLoopbackTestHelper.LogFileType;
 import com.android.media.tests.AudioLoopbackTestHelper.ResultData;
 import com.android.tradefed.config.Option;
@@ -155,6 +156,8 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
     private static final String KEY_RESULT_SAMPLING_FREQUENCY_CONFIDENCE = "sampling_frequency";
     private static final String KEY_RESULT_PERIOD_CONFIDENCE = "period_confidence";
     private static final String KEY_RESULT_SAMPLING_BLOCK_SIZE = "block_size";
+
+    private static final String REDUCED_GLITCHES_TEST_DURATION = "600"; // 10 min
 
     private static final LogFileType[] LATENCY_TEST_LOGS = {
         LogFileType.RESULT,
@@ -322,6 +325,7 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
 
         mTestRunHelper.startTest(1);
 
+        Map<String, String> metrics = null;
         try {
             if (!verifyTestParameters()) {
                 return;
@@ -330,26 +334,158 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
             // Stop logcat logging so we can record one logcat log per iteration
             getDevice().stopLogcat();
 
-            // Run test iterations
-            for (int i = 0; i < mIterations; i++) {
-                CLog.i("---- Iteration " + i + " of " + (mIterations - 1) + " -----");
-
-                final ResultData d = new ResultData();
-                d.setIteration(i);
-                Map<String, String> resultsDictionary = null;
-                resultsDictionary = runTest(d, getSingleTestTimeoutValue());
-
-                mLoopbackTestHelper.addTestData(d, resultsDictionary);
+            switch (getTestType()) {
+                case GLITCH:
+                    runGlitchesTest(mTestRunHelper, mLoopbackTestHelper);
+                    break;
+                case LATENCY:
+                case LATENCY_STRESS:
+                    // Run test iterations
+                    runLatencyTest(mLoopbackTestHelper, mIterations);
+                    break;
+                default:
+                    break;
             }
 
             mLoopbackTestHelper.processTestData();
-        } finally {
-            Map<String, String> metrics = uploadLogsReturnMetrics(listener);
+            metrics = uploadLogsReturnMetrics(listener);
             CLog.i("Uploading metrics values:\n" + Arrays.toString(metrics.entrySet().toArray()));
             mTestRunHelper.endTest(metrics);
+        } catch (TestFailureException e) {
+            CLog.i("TestRunHelper.reportFailure triggered");
+        } finally {
+            CLog.i("Test ended - cleanup");
             deleteAllTempFiles();
             getDevice().startLogcat();
         }
+    }
+
+    private void runLatencyTest(AudioLoopbackTestHelper loopbackTestHelper, int iterations)
+            throws DeviceNotAvailableException, TestFailureException {
+        for (int i = 0; i < iterations; i++) {
+            CLog.i("---- Iteration " + i + " of " + (iterations - 1) + " -----");
+
+            final ResultData d = new ResultData();
+            d.setIteration(i);
+            Map<String, String> resultsDictionary = null;
+            resultsDictionary = runTest(d, getSingleTestTimeoutValue());
+            loopbackTestHelper.addTestData(d, resultsDictionary, true);
+        }
+    }
+
+    /**
+     * Glitches test, strategy:
+     * <p>
+     *
+     * <ul>
+     *   <li>1. Calibrate Audio level
+     *   <li>2. Run Audio Latency test until seeing good waveform
+     *   <li>3. Run small Glitches test, 5-10 seconds
+     *   <li>4. If numbers look good, run long Glitches test, else run reduced Glitches test
+     * </ul>
+     *
+     * @param testRunHelper
+     * @param loopbackTestHelper
+     * @throws DeviceNotAvailableException
+     * @throws TestFailureException
+     */
+    private void runGlitchesTest(TestRunHelper testRunHelper,
+            AudioLoopbackTestHelper loopbackTestHelper)
+                    throws DeviceNotAvailableException, TestFailureException {
+        final int MAX_RETRIES = 3;
+        int nrOfSuccessfulTests;
+        int counter = 0;
+        AudioLoopbackTestHelper tempTestHelper = null;
+        boolean runningReducedGlitchesTest = false;
+
+        // Step 1: Calibrate Audio level
+        // Step 2: Run Audio Latency test until seeing good waveform
+        final int LOOPBACK_ITERATIONS = 4;
+        final String originalTestType = mTestType;
+        final String originalBufferTestDuration = mBufferTestDuration;
+        mTestType = TESTTYPE_LATENCY_STR;
+        do {
+            nrOfSuccessfulTests = 0;
+            tempTestHelper = new AudioLoopbackTestHelper(LOOPBACK_ITERATIONS);
+            runLatencyTest(tempTestHelper, LOOPBACK_ITERATIONS);
+            nrOfSuccessfulTests = tempTestHelper.processTestData();
+            counter++;
+        } while (nrOfSuccessfulTests <= 0 && counter <= MAX_RETRIES);
+
+        if (nrOfSuccessfulTests <= 0) {
+            testRunHelper.reportFailure("Glitch Setup failed: Latency test");
+        }
+
+        // Retrieve audio level from successful test
+        int audioLevel = -1;
+        List<ResultData> results = tempTestHelper.getAllTestData();
+        for (ResultData rd : results) {
+            // Check if test passed
+            if (rd.getImageAnalyzerResult() == Result.PASS && rd.getConfidence() == 1.0) {
+                audioLevel = rd.getAudioLevel();
+                break;
+            }
+        }
+
+        if (audioLevel < 6) {
+            testRunHelper.reportFailure("Glitch Setup failed: Audio level not valid");
+        }
+
+        CLog.i("Audio Glitch: Audio level is " + audioLevel);
+
+        // Step 3: Run small Glitches test, 5-10 seconds
+        mTestType = originalTestType;
+        mBufferTestDuration = "10";
+        mAudioLevel = Integer.toString(audioLevel);
+
+        counter = 0;
+        int glitches = -1;
+        do {
+            tempTestHelper = new AudioLoopbackTestHelper(1);
+            runLatencyTest(tempTestHelper, 1);
+            Map<String, String> resultsDictionary =
+                    tempTestHelper.getResultDictionaryForIteration(0);
+            final String nrOfGlitches =
+                    resultsDictionary.get(getMetricsKey(KEY_RESULT_NUMBER_OF_GLITCHES));
+            glitches = Integer.parseInt(nrOfGlitches);
+            CLog.i("10 s glitch test produced " + glitches + " glitches");
+            counter++;
+        } while (glitches > 10 || glitches < 0 && counter <= MAX_RETRIES);
+
+        // Step 4: If numbers look good, run long Glitches test
+        if (glitches > 10 || glitches < 0) {
+            // Reduce test time and set some values to 0 once test completes
+            runningReducedGlitchesTest = true;
+            mBufferTestDuration = REDUCED_GLITCHES_TEST_DURATION;
+        } else {
+            mBufferTestDuration = originalBufferTestDuration;
+        }
+
+        final ResultData d = new ResultData();
+        d.setIteration(0);
+        Map<String, String> resultsDictionary = null;
+        resultsDictionary = runTest(d, getSingleTestTimeoutValue());
+        if (runningReducedGlitchesTest) {
+            // Special treatment, we want to upload values, but also indicate that pre-test
+            // conditions failed. We will set the glitches count and zero out the rest.
+            String[] testValuesToChangeArray = new String[] {
+                KEY_RESULT_RECORDER_BENCHMARK,
+                KEY_RESULT_RECORDER_OUTLIER,
+                KEY_RESULT_PLAYER_BENCHMARK,
+                KEY_RESULT_PLAYER_OUTLIER,
+                KEY_RESULT_RECORDER_BUFFER_CALLBACK,
+                KEY_RESULT_PLAYER_BUFFER_CALLBACK
+            };
+
+            for (String key : testValuesToChangeArray) {
+                final String metricsKey = getMetricsKey(key);
+                if (resultsDictionary.containsKey(metricsKey)) {
+                    resultsDictionary.put(metricsKey, "0");
+                }
+            }
+        }
+
+        loopbackTestHelper.addTestData(d, resultsDictionary, false);
     }
 
     private void initializeTest(ITestInvocationListener listener)
@@ -370,7 +506,7 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
     }
 
     private Map<String, String> runTest(ResultData data, final long timeout)
-            throws DeviceNotAvailableException {
+            throws DeviceNotAvailableException, TestFailureException {
 
         // start measurement and wait for result file
         final NullOutputReceiver receiver = new NullOutputReceiver();
@@ -434,7 +570,7 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
 
             // Trust but verify, so get Audio Level from ADB and compare to value from app
             final int adbAudioLevel =
-                    AudioLevelUtility.extractDeviceAudioLevelFromAdbShell(getDevice());
+                    AudioLevelUtility.extractDeviceHeadsetLevelFromAdbShell(getDevice());
             if (data.getAudioLevel() != adbAudioLevel) {
                 final String errMsg =
                         String.format(
@@ -461,7 +597,7 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
     }
 
     private Map<String, String> uploadLogsReturnMetrics(ITestInvocationListener listener)
-            throws DeviceNotAvailableException {
+            throws DeviceNotAvailableException, TestFailureException {
 
         // "resultDictionary" is used to post results to dashboards like BlackBox
         // "results" contains test logs to be uploaded; i.e. to Sponge
@@ -545,7 +681,7 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
         return TestType.NONE;
     }
 
-    private boolean verifyTestParameters() {
+    private boolean verifyTestParameters() throws TestFailureException {
         if (getTestType() != TestType.NONE) {
             return true;
         }

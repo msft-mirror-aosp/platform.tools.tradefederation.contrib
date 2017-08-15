@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 /** Class to provide audio level utility functions for a test device */
 public class AudioLevelUtility {
 
-    public static int extractDeviceAudioLevelFromAdbShell(ITestDevice device)
+    public static int extractDeviceHeadsetLevelFromAdbShell(ITestDevice device)
             throws DeviceNotAvailableException {
 
         final String ADB_SHELL_DUMPSYS_AUDIO = "dumpsys audio";
