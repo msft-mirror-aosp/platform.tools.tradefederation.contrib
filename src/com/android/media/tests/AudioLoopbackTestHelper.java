@@ -287,15 +287,20 @@ public class AudioLoopbackTestHelper {
         mAllResults = new ArrayList<ResultData>(iterations);
     }
 
-    public void addTestData(ResultData data, Map<String, String> resultDictionary) {
+    public void addTestData(ResultData data,
+            Map<String,
+            String> resultDictionary,
+            boolean useImageAnalyzer) {
         mResultDictionaries.add(data.getIteration(), resultDictionary);
         mAllResults.add(data);
 
-        // Analyze captured screenshot to see if wave form is within reason
-        final String screenshot = data.getLogFile(LogFileType.GRAPH);
-        final Pair<Result, String> result = AudioLoopbackImageAnalyzer.analyzeImage(screenshot);
-        data.setImageAnalyzerResult(result.first);
-        data.setFailureReason(result.second);
+        if (useImageAnalyzer) {
+            // Analyze captured screenshot to see if wave form is within reason
+            final String screenshot = data.getLogFile(LogFileType.GRAPH);
+            final Pair<Result, String> result = AudioLoopbackImageAnalyzer.analyzeImage(screenshot);
+            data.setImageAnalyzerResult(result.first);
+            data.setFailureReason(result.second);
+        }
     }
 
     public final List<ResultData> getAllTestData() {

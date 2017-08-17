@@ -131,10 +131,13 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
 
             // "resultDictionary" can be used to post results to dashboards like BlackBox
             resultsDictionary = runTest(resultsDictionary, TEST_TIMEOUT_MS);
-        } finally {
             final String metricsStr = Arrays.toString(resultsDictionary.entrySet().toArray());
             CLog.i("Uploading metrics values:\n" + metricsStr);
             mTestRunHelper.endTest(resultsDictionary);
+        } catch (TestFailureException e) {
+            CLog.i("TestRunHelper.reportFailure triggered");
+        } finally {
+            deleteFileFromDevice(getAbsoluteFilename());
         }
     }
 
@@ -153,9 +156,10 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
      * </ul>
      *
      * @throws DeviceNotAvailableException
+     * @throws TestFailureException
      */
     private Map<String, String> runTest(Map<String, String> results, final long timeout)
-            throws DeviceNotAvailableException {
+            throws DeviceNotAvailableException, TestFailureException {
         final CollectingOutputReceiver receiver = new CollectingOutputReceiver();
         final String cmd = generateAdbScreenRecordCommand();
         final String deviceFileName = getAbsoluteFilename();
@@ -169,15 +173,10 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
         CLog.i("Wait for recorded file: " + deviceFileName);
         if (!waitForFile(getDevice(), timeout, deviceFileName)) {
             mTestRunHelper.reportFailure("Recorded test file not found");
-            // Since we don't have a file, no need to delete it; we can return here
-            return results;
         }
 
         CLog.i("Get number of recorded frames and recorded length from adb output");
-        if (!extractVideoDataFromAdbOutput(adbOutput, results)) {
-            deleteFileFromDevice(deviceFileName);
-            return results;
-        }
+        extractVideoDataFromAdbOutput(adbOutput, results);
 
         CLog.i("Get duration and bitrate info from video file using '" + AVPROBE_STR + "'");
         try {
@@ -234,6 +233,10 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
      * @throws DeviceNotAvailableException
      */
     private void deleteFileFromDevice(String deviceFileName) throws DeviceNotAvailableException {
+        if (deviceFileName == null || deviceFileName.isEmpty()) {
+            return;
+        }
+
         CLog.i("Delete file from device: " + deviceFileName);
         getDevice().executeShellCommand("rm -f " + deviceFileName);
     }
@@ -243,15 +246,15 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
      *
      * @throws DeviceNotAvailableException
      * @throws ParseException
+     * @throws TestFailureException
      */
-    private boolean extractDurationAndBitrateFromVideoFileUsingAvprobe(
+    private void extractDurationAndBitrateFromVideoFileUsingAvprobe(
             String deviceFileName, Map<String, String> results)
-            throws DeviceNotAvailableException, ParseException {
+            throws DeviceNotAvailableException, ParseException, TestFailureException {
         CLog.i("Check if the recorded file has some data in it: " + deviceFileName);
         IFileEntry video = getDevice().getFileEntry(deviceFileName);
         if (video == null || video.getFileEntry().getSizeValue() < 1) {
             mTestRunHelper.reportFailure("Video Entry info failed");
-            return false;
         }
 
         final File recordedVideo = getDevice().pullFile(deviceFileName);
@@ -271,14 +274,12 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
 
         if (result.getStatus() != CommandStatus.SUCCESS) {
             mTestRunHelper.reportFailure(AVPROBE_STR + " command failed");
-            return false;
         }
 
         String data = result.getStderr();
         CLog.i("data: " + data);
         if (data == null || data.isEmpty()) {
             mTestRunHelper.reportFailure(AVPROBE_STR + " output data is empty");
-            return false;
         }
 
         Matcher m = Pattern.compile(REGEX_IS_VIDEO_OK).matcher(data);
@@ -286,7 +287,6 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
             final String errMsg =
                     "Video verification failed; no matching verification pattern found";
             mTestRunHelper.reportFailure(errMsg);
-            return false;
         }
 
         String duration = m.group(1);
@@ -296,11 +296,12 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
 
         results.put(RESULT_KEY_VERIFIED_DURATION, Long.toString(durationInMilliseconds / 1000));
         results.put(RESULT_KEY_VERIFIED_BITRATE, Long.toString(bitrateInKilobits));
-        return true;
     }
 
-    /** Extracts recorded number of frames and recorded video length from adb output */
-    private boolean extractVideoDataFromAdbOutput(String adbOutput, Map<String, String> results) {
+    /** Extracts recorded number of frames and recorded video length from adb output
+     * @throws TestFailureException */
+    private boolean extractVideoDataFromAdbOutput(String adbOutput, Map<String, String> results)
+            throws TestFailureException {
         final String regEx = "recorded (\\d+) frames in (\\d+) second";
         Matcher m = Pattern.compile(regEx).matcher(adbOutput);
         if (!m.find()) {
@@ -387,8 +388,9 @@ public class AdbScreenrecordTest implements IDeviceTest, IRemoteTest {
         throw new RuntimeException(err);
     }
 
-    /** Verifies that passed in test parameters are legitimate */
-    private boolean verifyTestParameters() {
+    /** Verifies that passed in test parameters are legitimate
+     * @throws TestFailureException */
+    private boolean verifyTestParameters() throws TestFailureException {
         if (mRecordTimeInSeconds != -1 && mRecordTimeInSeconds < 1) {
             final String error =
                     String.format(ERR_OPTION_MALFORMED, OPTION_TIME_LIMIT, mRecordTimeInSeconds);
