@@ -100,10 +100,10 @@ public class AudioLoopbackTestHelper {
         private String mFailureReason = null;
 
         // Optional
-        private Float mPeriodConfidence = Float.valueOf(0.0f);
-        private Float mRms = Float.valueOf(0.0f);
-        private Float mRmsAverage = Float.valueOf(0.0f);
-        private Integer mBblockSize = Integer.valueOf(0);
+        private Float mPeriodConfidence = null;
+        private Float mRms = null;
+        private Float mRmsAverage = null;
+        private Integer mBblockSize = null;
 
         public float getLatency() {
             return mLatencyMs.floatValue();
@@ -111,6 +111,10 @@ public class AudioLoopbackTestHelper {
 
         public void setLatency(float latencyMs) {
             this.mLatencyMs = Float.valueOf(latencyMs);
+        }
+
+        public boolean hasLatency() {
+            return mLatencyMs != null;
         }
 
         public float getConfidence() {
@@ -121,12 +125,20 @@ public class AudioLoopbackTestHelper {
             this.mLatencyConfidence = Float.valueOf(latencyConfidence);
         }
 
+        public boolean hasConfidence() {
+            return mLatencyConfidence != null;
+        }
+
         public float getPeriodConfidence() {
             return mPeriodConfidence.floatValue();
         }
 
         public void setPeriodConfidence(float periodConfidence) {
             this.mPeriodConfidence = Float.valueOf(periodConfidence);
+        }
+
+        public boolean hasPeriodConfidence() {
+            return mPeriodConfidence != null;
         }
 
         public float getRMS() {
@@ -137,12 +149,20 @@ public class AudioLoopbackTestHelper {
             this.mRms = Float.valueOf(rms);
         }
 
+        public boolean hasRMS() {
+            return mRms != null;
+        }
+
         public float getRMSAverage() {
             return mRmsAverage.floatValue();
         }
 
         public void setRMSAverage(float rmsAverage) {
             this.mRmsAverage = Float.valueOf(rmsAverage);
+        }
+
+        public boolean hasRMSAverage() {
+            return mRmsAverage != null;
         }
 
         public int getAudioLevel() {
@@ -153,12 +173,20 @@ public class AudioLoopbackTestHelper {
             this.mAudioLevel = Integer.valueOf(audioLevel);
         }
 
+        public boolean hasAudioLevel() {
+            return mAudioLevel != null;
+        }
+
         public int getBlockSize() {
             return mBblockSize.intValue();
         }
 
         public void setBlockSize(int blockSize) {
             this.mBblockSize = Integer.valueOf(blockSize);
+        }
+
+        public boolean hasBlockSize() {
+            return mBblockSize != null;
         }
 
         public int getIteration() {
@@ -215,8 +243,8 @@ public class AudioLoopbackTestHelper {
         public boolean hasBadResults() {
             return hasTimedOut()
                     || hasNoTestResults()
-                    || hasNoLatencyResult()
-                    || hasNoLatencyConfidence()
+                    || !hasLatency()
+                    || !hasConfidence()
                     || mImageAnalyzerResult == Result.FAIL;
         }
 
@@ -228,16 +256,8 @@ public class AudioLoopbackTestHelper {
             return mLogs.containsKey(log);
         }
 
-        public boolean hasNoLatencyResult() {
-            return mLatencyMs == null;
-        }
-
-        public boolean hasNoLatencyConfidence() {
-            return mLatencyConfidence == null;
-        }
-
         public boolean hasNoTestResults() {
-            return hasNoLatencyConfidence() && hasNoLatencyResult();
+            return !hasConfidence() && !hasLatency();
         }
 
         public static Comparator<ResultData> latencyComparator =
@@ -294,7 +314,7 @@ public class AudioLoopbackTestHelper {
         mResultDictionaries.add(data.getIteration(), resultDictionary);
         mAllResults.add(data);
 
-        if (useImageAnalyzer) {
+        if (useImageAnalyzer && data.hasLogFile(LogFileType.GRAPH)) {
             // Analyze captured screenshot to see if wave form is within reason
             final String screenshot = data.getLogFile(LogFileType.GRAPH);
             final Pair<Result, String> result = AudioLoopbackImageAnalyzer.analyzeImage(screenshot);
@@ -529,13 +549,13 @@ public class AudioLoopbackTestHelper {
             sb.append(buildId).append(SEPARATOR);
             sb.append(serialNumber).append(SEPARATOR);
             sb.append(data.getIteration()).append(SEPARATOR);
-            sb.append(data.getLatency()).append(SEPARATOR);
-            sb.append(data.getConfidence()).append(SEPARATOR);
-            sb.append(data.getPeriodConfidence()).append(SEPARATOR);
-            sb.append(data.getBlockSize()).append(SEPARATOR);
-            sb.append(data.getAudioLevel()).append(SEPARATOR);
-            sb.append(data.getRMS()).append(SEPARATOR);
-            sb.append(data.getRMSAverage()).append(SEPARATOR);
+            sb.append(data.hasLatency() ? data.getLatency() : "").append(SEPARATOR);
+            sb.append(data.hasConfidence() ? data.getConfidence() : "").append(SEPARATOR);
+            sb.append(data.hasPeriodConfidence() ? data.getPeriodConfidence() : "").append(SEPARATOR);
+            sb.append(data.hasBlockSize() ? data.getBlockSize() : "").append(SEPARATOR);
+            sb.append(data.hasAudioLevel() ? data.getAudioLevel() : "").append(SEPARATOR);
+            sb.append(data.hasRMS() ? data.getRMS() : "").append(SEPARATOR);
+            sb.append(data.hasRMSAverage() ? data.getRMSAverage() : "").append(SEPARATOR);
             sb.append(data.getImageAnalyzerResult().name()).append(SEPARATOR);
             sb.append(data.getFailureReason());
 
@@ -566,13 +586,13 @@ public class AudioLoopbackTestHelper {
                 continue;
             }
 
-            if (data.hasNoLatencyResult()) {
+            if (!data.hasLatency()) {
                 testWithoutLatencyResultCount++;
                 testNoData++;
                 continue;
             }
 
-            if (data.hasNoLatencyConfidence()) {
+            if (!data.hasConfidence()) {
                 testWithoutConfidenceResultCount++;
                 testNoData++;
                 continue;
