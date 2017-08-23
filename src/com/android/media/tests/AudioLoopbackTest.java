@@ -549,8 +549,9 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
         } while (!data.hasLogFile(LogFileType.RESULT) && !data.isTimedOut());
 
         // Grab logcat for iteration
-        final InputStreamSource lc = getDevice().getLogcatSince(deviceTestStartTime);
-        saveLogcatForIteration(data, lc, data.getIteration());
+        try (final InputStreamSource lc = getDevice().getLogcatSince(deviceTestStartTime)) {
+            saveLogcatForIteration(data, lc, data.getIteration());
+        }
 
         // Check if test timed out. If so, don't fail the test, but return to upper logic.
         // We accept certain number of individual test timeouts.
@@ -830,11 +831,9 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
             CLog.e("Logfile not found for LogFileType=" + key.name());
         } else {
             File logFile = new File(logFilename);
-            InputStreamSource iss = new FileInputStreamSource(logFile);
-            listener.testLog(prefix, logDataType, iss);
-
-            // cleanup
-            iss.cancel();
+            try (InputStreamSource iss = new FileInputStreamSource(logFile)) {
+                listener.testLog(prefix, logDataType, iss);
+            }
         }
     }
 
@@ -852,7 +851,7 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
 
             // Copy logcat data into temp file
             Files.copy(logcat.createInputStream(), temp.toPath(), REPLACE_EXISTING);
-            logcat.cancel();
+            logcat.close();
         } catch (final IOException e) {
             CLog.i("Error when saving logcat for iteration=" + iteration);
             CLog.e(e);
@@ -863,11 +862,10 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
             throws DeviceNotAvailableException, IOException {
         final File csvTmpFile = File.createTempFile("audio_test_data", "csv");
         mLoopbackTestHelper.writeAllResultsToCSVFile(csvTmpFile, getDevice());
-        InputStreamSource iss = new FileInputStreamSource(csvTmpFile);
-        listener.testLog("audio_test_data", LogDataType.JACOCO_CSV, iss);
-
+        try (InputStreamSource iss = new FileInputStreamSource(csvTmpFile)) {
+            listener.testLog("audio_test_data", LogDataType.JACOCO_CSV, iss);
+        }
         // cleanup
-        iss.cancel();
         csvTmpFile.delete();
     }
 
