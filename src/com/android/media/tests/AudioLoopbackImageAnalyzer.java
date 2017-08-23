@@ -33,13 +33,13 @@ import javax.imageio.ImageIO;
 public class AudioLoopbackImageAnalyzer {
 
     // General
-    private static final int HORIZONTAL_THRESHOLD = 10;
     private static final int VERTICAL_THRESHOLD = 0;
     private static final int PRIMARY_WAVE_COLOR = 0xFF1E4A99;
     private static final int SECONDARY_WAVE_COLOR = 0xFF1D4998;
     private static final int[] TARGET_COLORS_TABLET =
             new int[] {PRIMARY_WAVE_COLOR, SECONDARY_WAVE_COLOR};
-    private static final int[] TARGET_COLORS_PHONE = new int[] {PRIMARY_WAVE_COLOR};
+    private static final int[] TARGET_COLORS_PHONE =
+            new int[] {PRIMARY_WAVE_COLOR, SECONDARY_WAVE_COLOR};
 
     private static final float EXPERIMENTAL_WAVE_MAX_TABLET = 69.0f; // In percent of image height
     private static final float EXPERIMENTAL_WAVE_MAX_PHONE = 32.0f; // In percent of image height
@@ -58,7 +58,7 @@ public class AudioLoopbackImageAnalyzer {
     // Required numbers of column for a response
     private static final int MIN_NUMBER_OF_COLUMNS = 4;
     // The difference between two amplitude columns should not be more than this
-    private static final float MAX_ALLOWED_COLUMN_DECREASE = 0.50f;
+    private static final float MAX_ALLOWED_COLUMN_DECREASE = 0.42f;
     // Only check MAX_ALLOWED_COLUMN_DECREASE up to this number
     private static final float MIN_NUMBER_OF_DECREASING_COLUMNS = 8;
 
@@ -95,21 +95,24 @@ public class AudioLoopbackImageAnalyzer {
         final int[] targetColors;
         final int amplitudeCenterMaxDiff;
         final float maxDuration;
-        final int minNrOfZeroesBetweenAmplitudes;
+        final int minNrOfZeroesBetweenAmplitudes = 5;
+        final int horizontalStart; //ignore anything left of this bound
+        int horizontalThreshold = 10;
 
         if (width >= TABLET_SCREEN_MIN_WIDTH && height >= TABLET_SCREEN_MIN_HEIGHT) {
             CLog.i("Apply TABLET config values");
             waveMax = EXPERIMENTAL_WAVE_MAX_TABLET;
             amplitudeCenterMaxDiff = 40;
-            minNrOfZeroesBetweenAmplitudes = 8;
-            maxDuration = 3 * SECTION_WIDTH_IN_PERCENT;
+            maxDuration = 5 * SECTION_WIDTH_IN_PERCENT;
             targetColors = TARGET_COLORS_TABLET;
+            horizontalStart = Math.round(1.7f * SECTION_WIDTH_IN_PERCENT * width / 100.0f);
+            horizontalThreshold = 40;
         } else {
             waveMax = EXPERIMENTAL_WAVE_MAX_PHONE;
             amplitudeCenterMaxDiff = 20;
-            minNrOfZeroesBetweenAmplitudes = 5;
             maxDuration = 2.5f * SECTION_WIDTH_IN_PERCENT;
             targetColors = TARGET_COLORS_PHONE;
+            horizontalStart = Math.round(1 * SECTION_WIDTH_IN_PERCENT * width / 100.0f);
         }
 
         // Amplitude
@@ -122,8 +125,8 @@ public class AudioLoopbackImageAnalyzer {
         final int[] horizontal = new int[width];
 
         projectPixelsToXAxis(img, targetColors, horizontal, width, height);
-        filter(horizontal, HORIZONTAL_THRESHOLD);
-        final Pair<Integer, Integer> durationBounds = getBounds(horizontal);
+        filter(horizontal, horizontalThreshold);
+        final Pair<Integer, Integer> durationBounds = getBounds(horizontal, horizontalStart, -1);
         if (!boundsWithinRange(durationBounds, 0, width)) {
             final String fmt = "%1$s Upper/Lower bound along horizontal axis not found";
             final String err = String.format(fmt, FN_TAG);
@@ -133,7 +136,7 @@ public class AudioLoopbackImageAnalyzer {
 
         projectPixelsToYAxis(img, targetColors, vertical, height, durationBounds);
         filter(vertical, VERTICAL_THRESHOLD);
-        final Pair<Integer, Integer> amplitudeBounds = getBounds(vertical);
+        final Pair<Integer, Integer> amplitudeBounds = getBounds(vertical, -1, -1);
         if (!boundsWithinRange(durationBounds, 0, height)) {
             final String fmt = "%1$s: Upper/Lower bound along vertical axis not found";
             final String err = String.format(fmt, FN_TAG);
@@ -216,34 +219,42 @@ public class AudioLoopbackImageAnalyzer {
         }
 
         final ArrayList<Amplitude> amplitudes = new ArrayList<Amplitude>();
-        Amplitude currentAmplitude = null;
+        Amplitude currentAmplitude = new Amplitude();
+        amplitudes.add(currentAmplitude);
         int zeroCounter = 0;
 
+        // Create amplitude objects that track largest amplitude within a "group" in the array.
+        // Example array:
+        //      [ 202, 530, 420, 12, 0, 0, 0, 0, 0, 0, 0, 236, 423, 262, 0, 0, 0, 0, 0, 0, 0, 0 ]
+        // We would get two amplitude objects with amplitude 530 and 423. Each amplitude object
+        // will also get the number of zeroes to the next amplitude, i.e. 7 and 8 respectively.
         for (int i = durationLeft; i < durationRight; i++) {
             final int v = horizontal[i];
             if (v == 0) {
+                // Count how many consecutive zeroes we have
                 zeroCounter++;
-            } else {
-                CLog.i("index=" + i + ", v=" + v);
+                continue;
+            }
 
-                if (zeroCounter > minNrOfZeroesBetweenAmplitudes) {
-                    // Found a new amplitude; update old amplitude
-                    // with the "gap" count - i.e. nr of zeroes between the amplitudes
-                    if (currentAmplitude != null) {
-                        currentAmplitude.zeroCounter = zeroCounter;
-                    }
+            CLog.i("index=" + i + ", v=" + v);
 
-                    // Create new Amplitude object
-                    currentAmplitude = new Amplitude();
-                    amplitudes.add(currentAmplitude);
+            if (zeroCounter > minNrOfZeroesBetweenAmplitudes) {
+                // Found a new amplitude; update old amplitude
+                // with the "gap" count - i.e. nr of zeroes between the amplitudes
+                if (currentAmplitude != null) {
+                    currentAmplitude.zeroCounter = zeroCounter;
                 }
 
-                // Reset counter
-                zeroCounter = 0;
+                // Create new Amplitude object
+                currentAmplitude = new Amplitude();
+                amplitudes.add(currentAmplitude);
+            }
 
-                if (currentAmplitude != null && v > currentAmplitude.maxHeight) {
-                    currentAmplitude.maxHeight = horizontal[i];
-                }
+            // Reset counter
+            zeroCounter = 0;
+
+            if (currentAmplitude != null && v > currentAmplitude.maxHeight) {
+                currentAmplitude.maxHeight = v;
             }
         }
 
@@ -415,10 +426,18 @@ public class AudioLoopbackImageAnalyzer {
         }
     }
 
-    private static Pair<Integer, Integer> getBounds(int[] array) {
+    private static Pair<Integer, Integer> getBounds(int[] array, int lowerBound, int upperBound) {
         // Determine min, max
+        if (lowerBound == -1) {
+            lowerBound = 0;
+        }
+
+        if (upperBound == -1) {
+            upperBound = array.length - 1;
+        }
+
         int min = -1;
-        for (int i = 0; i < array.length; i++) {
+        for (int i = lowerBound; i <= upperBound; i++) {
             if (array[i] > 0) {
                 min = i;
                 break;
@@ -426,7 +445,7 @@ public class AudioLoopbackImageAnalyzer {
         }
 
         int max = -1;
-        for (int i = array.length - 1; i >= 0; i--) {
+        for (int i = upperBound; i >= lowerBound; i--) {
             if (array[i] > 0) {
                 max = i;
                 break;

@@ -571,10 +571,10 @@ public class AudioLoopbackTest implements IDeviceTest, IRemoteTest {
             // Trust but verify, so get Audio Level from ADB and compare to value from app
             final int adbAudioLevel =
                     AudioLevelUtility.extractDeviceHeadsetLevelFromAdbShell(getDevice());
-            if (data.getAudioLevel() != adbAudioLevel) {
+            if (adbAudioLevel > -1 && data.getAudioLevel() != adbAudioLevel) {
                 final String errMsg =
                         String.format(
-                                "App Audio Level (%1$d)differs from ADB level (%2$d)",
+                                "App Audio Level (%1$d) differs from ADB level (%2$d)",
                                 data.getAudioLevel(), adbAudioLevel);
                 mTestRunHelper.reportFailure(errMsg);
             }
