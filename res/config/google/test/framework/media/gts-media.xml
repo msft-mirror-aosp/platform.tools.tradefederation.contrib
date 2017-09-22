@@ -80,7 +80,7 @@
     </test>
 
     <test class="com.android.tradefed.testtype.InstrumentationTest">
-        <option name="class" value="com.google.android.media.gts.Vp8CodecTest" />
+        <option name="class" value="com.google.android.media.gts.RtcVideoCodecTest" />
         <option name="package" value="com.google.android.media.gts" />
         <option name="runner" value="android.support.test.runner.AndroidJUnitRunner" />
         <option name="run-name" value="xts_media_test" />
