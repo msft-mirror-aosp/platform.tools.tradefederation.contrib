@@ -61,6 +61,9 @@ public class AudioLoopbackImageAnalyzer {
     private static final float MAX_ALLOWED_COLUMN_DECREASE = 0.42f;
     // Only check MAX_ALLOWED_COLUMN_DECREASE up to this number
     private static final float MIN_NUMBER_OF_DECREASING_COLUMNS = 8;
+    // Minimum space between two amplitude columns
+    private static final int MIN_SPACE_BETWEEN_TWO_COLUMNS = 4;
+    private static final int MIN_SPACE_BETWEEN_TWO_COLUMNS_TABLET = 5;
 
     enum Result {
         PASS,
@@ -95,7 +98,7 @@ public class AudioLoopbackImageAnalyzer {
         final int[] targetColors;
         final int amplitudeCenterMaxDiff;
         final float maxDuration;
-        final int minNrOfZeroesBetweenAmplitudes = 5;
+        final int minNrOfZeroesBetweenAmplitudes;
         final int horizontalStart; //ignore anything left of this bound
         int horizontalThreshold = 10;
 
@@ -107,12 +110,14 @@ public class AudioLoopbackImageAnalyzer {
             targetColors = TARGET_COLORS_TABLET;
             horizontalStart = Math.round(1.7f * SECTION_WIDTH_IN_PERCENT * width / 100.0f);
             horizontalThreshold = 40;
+            minNrOfZeroesBetweenAmplitudes = MIN_SPACE_BETWEEN_TWO_COLUMNS_TABLET;
         } else {
             waveMax = EXPERIMENTAL_WAVE_MAX_PHONE;
             amplitudeCenterMaxDiff = 20;
             maxDuration = 2.5f * SECTION_WIDTH_IN_PERCENT;
             targetColors = TARGET_COLORS_PHONE;
             horizontalStart = Math.round(1 * SECTION_WIDTH_IN_PERCENT * width / 100.0f);
+            minNrOfZeroesBetweenAmplitudes = MIN_SPACE_BETWEEN_TWO_COLUMNS;
         }
 
         // Amplitude
@@ -238,7 +243,7 @@ public class AudioLoopbackImageAnalyzer {
 
             CLog.i("index=" + i + ", v=" + v);
 
-            if (zeroCounter > minNrOfZeroesBetweenAmplitudes) {
+            if (zeroCounter >= minNrOfZeroesBetweenAmplitudes) {
                 // Found a new amplitude; update old amplitude
                 // with the "gap" count - i.e. nr of zeroes between the amplitudes
                 if (currentAmplitude != null) {
