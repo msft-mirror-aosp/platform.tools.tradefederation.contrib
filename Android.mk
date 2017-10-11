@@ -17,7 +17,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 # Only compile source java files in this lib.
-LOCAL_SRC_FILES := $(call all-java-files-under, src)
+LOCAL_SRC_FILES := $(call all-java-files-under, src) \
+    $(call all-java-files-under, tests/src)
 
 LOCAL_JAVA_RESOURCE_DIRS := res
 
@@ -27,7 +28,7 @@ LOCAL_JAVACFLAGS += -g -Xlint
 LOCAL_MODULE := tradefed-contrib
 
 LOCAL_MODULE_TAGS := optional
-LOCAL_JAVA_LIBRARIES := tradefed tools-common-prebuilt
+LOCAL_JAVA_LIBRARIES := tradefed tradefed-tests tools-common-prebuilt easymock
 
 LOCAL_JAR_MANIFEST := MANIFEST.mf
 
