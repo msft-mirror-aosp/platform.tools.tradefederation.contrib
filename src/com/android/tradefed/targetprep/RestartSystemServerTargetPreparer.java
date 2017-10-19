@@ -50,7 +50,7 @@ public class RestartSystemServerTargetPreparer implements ITargetPreparer {
         device.executeShellCommand("kill " + pid);
         boolean success = false;
         for (int tries = 0; tries < mMaxTries; ++tries) {
-            if (device.executeShellCommand("getprop sys.boot_completed").equals("1")) {
+            if (device.executeShellCommand("getprop sys.boot_completed").trim().equals("1")) {
                 success = true;
                 break;
             }
