@@ -16,6 +16,7 @@
 package com.android.tradefed.targetprep;
 
 import com.android.tradefed.build.IBuildInfo;
+import com.android.tradefed.config.OptionSetter;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.util.IRunUtil;
 
@@ -45,11 +46,68 @@ public class RestartSystemServerTargetPreparerTest {
     }
 
     @Test
-    public void testSetUp() throws Exception {
-        EasyMock.expect(mMockDevice.executeShellCommand("pidof system_server")).andReturn("123").once();
+    public void testSetUp_bootCompleteImmediate() throws Exception {
+        EasyMock.expect(mMockDevice.executeShellCommand("setprop sys.boot_completed 0")).andReturn(
+                null).once();
+        EasyMock.expect(mMockDevice.executeShellCommand("pidof system_server")).andReturn(
+                "123").once();
         EasyMock.expect(mMockDevice.executeShellCommand("kill 123")).andReturn(null).once();
+        EasyMock.expect(mMockDevice.executeShellCommand("getprop sys.boot_completed")).andReturn(
+                "1").once();
+        EasyMock.replay(mMockDevice, mMockBuildInfo);
+
+        mRestartSystemServerTargetPreparer.setUp(mMockDevice, mMockBuildInfo);
+        EasyMock.verify(mMockDevice, mMockBuildInfo);
+    }
+
+    @Test
+    public void testSetUp_bootCompleteImmediate_space() throws Exception {
+        EasyMock.expect(mMockDevice.executeShellCommand("setprop sys.boot_completed 0")).andReturn(
+                null).once();
+        EasyMock.expect(mMockDevice.executeShellCommand("pidof system_server")).andReturn(
+                "123").once();
+        EasyMock.expect(mMockDevice.executeShellCommand("kill 123")).andReturn(null).once();
+        EasyMock.expect(mMockDevice.executeShellCommand("getprop sys.boot_completed")).andReturn(
+                "1 ").once();
+        EasyMock.replay(mMockDevice, mMockBuildInfo);
+
+        mRestartSystemServerTargetPreparer.setUp(mMockDevice, mMockBuildInfo);
+        EasyMock.verify(mMockDevice, mMockBuildInfo);
+    }
+
+    @Test
+    public void testSetUp_bootCompleteAfterOneTry() throws Exception {
+        EasyMock.expect(mMockDevice.executeShellCommand("setprop sys.boot_completed 0")).andReturn(
+                null).once();
+        EasyMock.expect(mMockDevice.executeShellCommand("pidof system_server")).andReturn(
+                "123").once();
+        EasyMock.expect(mMockDevice.executeShellCommand("kill 123")).andReturn(null).once();
+        EasyMock.expect(mMockDevice.executeShellCommand("getprop sys.boot_completed")).andReturn(
+                "0").once();
         mMockRunUtil.sleep(EasyMock.anyLong());
         EasyMock.expectLastCall().once();
+        EasyMock.expect(mMockDevice.executeShellCommand("getprop sys.boot_completed")).andReturn(
+                "1").once();
+        EasyMock.replay(mMockDevice, mMockBuildInfo);
+
+        mRestartSystemServerTargetPreparer.setUp(mMockDevice, mMockBuildInfo);
+        EasyMock.verify(mMockDevice, mMockBuildInfo);
+    }
+
+    @Test(expected = TargetSetupError.class)
+    public void testSetUp_giveUp() throws Exception {
+        OptionSetter optionSetter = new OptionSetter(mRestartSystemServerTargetPreparer);
+        optionSetter.setOptionValue("max-tries", "1");
+        EasyMock.expect(mMockDevice.executeShellCommand("setprop sys.boot_completed 0")).andReturn(
+                null).once();
+        EasyMock.expect(mMockDevice.executeShellCommand("pidof system_server")).andReturn(
+                "123").once();
+        EasyMock.expect(mMockDevice.executeShellCommand("kill 123")).andReturn(null).once();
+        EasyMock.expect(mMockDevice.executeShellCommand("getprop sys.boot_completed")).andReturn(
+                "0").once();
+        mMockRunUtil.sleep(EasyMock.anyLong());
+        EasyMock.expectLastCall().once();
+        EasyMock.expect(mMockDevice.getDeviceDescriptor()).andReturn(null);
         EasyMock.replay(mMockDevice, mMockBuildInfo);
 
         mRestartSystemServerTargetPreparer.setUp(mMockDevice, mMockBuildInfo);
