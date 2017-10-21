@@ -116,7 +116,7 @@ public class AudioLoopbackImageAnalyzer {
             amplitudeCenterMaxDiff = 20;
             maxDuration = 2.5f * SECTION_WIDTH_IN_PERCENT;
             targetColors = TARGET_COLORS_PHONE;
-            horizontalStart = Math.round(1 * SECTION_WIDTH_IN_PERCENT * width / 100.0f);
+            horizontalStart = 0;
             minNrOfZeroesBetweenAmplitudes = MIN_SPACE_BETWEEN_TWO_COLUMNS;
         }
 
