@@ -61,21 +61,6 @@ public class RestartSystemServerTargetPreparerTest {
     }
 
     @Test
-    public void testSetUp_bootCompleteImmediate_space() throws Exception {
-        EasyMock.expect(mMockDevice.executeShellCommand("setprop sys.boot_completed 0")).andReturn(
-                null).once();
-        EasyMock.expect(mMockDevice.executeShellCommand("pidof system_server")).andReturn(
-                "123").once();
-        EasyMock.expect(mMockDevice.executeShellCommand("kill 123")).andReturn(null).once();
-        EasyMock.expect(mMockDevice.executeShellCommand("getprop sys.boot_completed")).andReturn(
-                "1 ").once();
-        EasyMock.replay(mMockDevice, mMockBuildInfo);
-
-        mRestartSystemServerTargetPreparer.setUp(mMockDevice, mMockBuildInfo);
-        EasyMock.verify(mMockDevice, mMockBuildInfo);
-    }
-
-    @Test
     public void testSetUp_bootCompleteAfterOneTry() throws Exception {
         EasyMock.expect(mMockDevice.executeShellCommand("setprop sys.boot_completed 0")).andReturn(
                 null).once();
