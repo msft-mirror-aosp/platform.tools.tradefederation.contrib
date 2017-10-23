@@ -114,33 +114,4 @@ public class RestartSystemServerTargetPreparerTest {
         EasyMock.verify(mMockDevice, mMockBuildInfo);
     }
 
-    @Test
-    public void testTearDown_restart() throws Exception {
-        OptionSetter optionSetter = new OptionSetter(mRestartSystemServerTargetPreparer);
-        optionSetter.setOptionValue("restart-before", "false");
-        optionSetter.setOptionValue("restart-after", "true");
-
-        EasyMock.expect(mMockDevice.executeShellCommand("setprop sys.boot_completed 0")).andReturn(
-                null).once();
-        EasyMock.expect(mMockDevice.executeShellCommand("pidof system_server")).andReturn(
-                "123").once();
-        EasyMock.expect(mMockDevice.executeShellCommand("kill 123")).andReturn(null).once();
-        EasyMock.expect(mMockDevice.executeShellCommand("getprop sys.boot_completed")).andReturn(
-                "1").once();
-        EasyMock.replay(mMockDevice, mMockBuildInfo);
-
-        mRestartSystemServerTargetPreparer.tearDown(mMockDevice, mMockBuildInfo, null);
-        EasyMock.verify(mMockDevice, mMockBuildInfo);
-    }
-
-    @Test
-    public void testNone() throws Exception {
-        OptionSetter optionSetter = new OptionSetter(mRestartSystemServerTargetPreparer);
-        optionSetter.setOptionValue("restart-before", "false");
-        optionSetter.setOptionValue("restart-after", "false");
-        EasyMock.replay(mMockDevice, mMockBuildInfo);
-
-        mRestartSystemServerTargetPreparer.setUp(mMockDevice, mMockBuildInfo);
-        EasyMock.verify(mMockDevice, mMockBuildInfo);
-    }
 }

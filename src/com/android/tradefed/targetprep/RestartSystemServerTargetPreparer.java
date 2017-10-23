@@ -20,24 +20,17 @@ import com.android.tradefed.config.Option;
 import com.android.tradefed.config.OptionClass;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
-import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.util.IRunUtil;
 import com.android.tradefed.util.RunUtil;
 
 @OptionClass(alias = "restart-system-server")
-public class RestartSystemServerTargetPreparer implements ITargetCleaner {
+public class RestartSystemServerTargetPreparer implements ITargetPreparer {
     @Option(name = "poll-interval-millis",
             description = "Time interval to poll if system server has restarted")
     private long mPollIntervalMillis = 3000L;
     @Option(name = "max-tries",
             description = "Max number of tries to poll")
     private int mMaxTries = 10;
-
-    @Option(name = "restart-before")
-    private boolean mRestartBefore = true;
-
-    @Option(name = "restart-after")
-    private boolean mRestartAfter = false;
 
     private IRunUtil mRunUtil;
 
@@ -49,7 +42,9 @@ public class RestartSystemServerTargetPreparer implements ITargetCleaner {
         this.mRunUtil = runUtil;
     }
 
-    private boolean restartSystemServer(ITestDevice device) throws DeviceNotAvailableException {
+    @Override
+    public void setUp(ITestDevice device, IBuildInfo buildInfo)
+            throws TargetSetupError, BuildError, DeviceNotAvailableException {
         device.executeShellCommand("setprop sys.boot_completed 0");
         String pid = device.executeShellCommand("pidof system_server");
         device.executeShellCommand("kill " + pid);
@@ -61,31 +56,9 @@ public class RestartSystemServerTargetPreparer implements ITargetCleaner {
             }
             mRunUtil.sleep(mPollIntervalMillis);
         }
-        return success;
-    }
-
-    @Override
-    public void setUp(ITestDevice device, IBuildInfo buildInfo)
-            throws TargetSetupError, BuildError, DeviceNotAvailableException {
-        if (!mRestartBefore) {
-            return;
-        }
-        boolean success = restartSystemServer(device);
         if (!success) {
             throw new TargetSetupError("Gave up on waiting for system server to restart",
                     device.getDeviceDescriptor());
-        }
-    }
-
-    @Override
-    public void tearDown(ITestDevice device, IBuildInfo buildInfo, Throwable e)
-            throws DeviceNotAvailableException {
-        if (!mRestartAfter) {
-            return;
-        }
-        boolean success = restartSystemServer(device);
-        if (!success) {
-            CLog.i("Failed to restart system server on tearDown.");
         }
     }
 }
