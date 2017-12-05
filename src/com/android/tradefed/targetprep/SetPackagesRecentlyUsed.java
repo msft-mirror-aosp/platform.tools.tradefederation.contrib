@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
  * Reads the list of packages on the phone and sets all packages to be 'last used' 24 hrs ago.
  * Writes to /data/system/package-usage.list and deletes it at teardown.
  */
-public class SetPackagesRecentlyUsed implements ITargetPreparer, ITargetCleaner {
+public class SetPackagesRecentlyUsed extends BaseTargetPreparer implements ITargetCleaner {
 
     private static final String LINE_PREFIX = "package:";
     private static final String PACKAGE_USAGE_FILE = "/data/system/package-usage.list";
