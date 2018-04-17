@@ -2,8 +2,18 @@
 <configuration description="Runs xts media tests">
     <option name="test-tag" value="xts_media_test" />
 
-    <!-- com.google.android.tradefed.targetprep.GoogleDeviceSetup -->
-    <option name="google-device-setup:screen-saver" value="off" />
+    <target_preparer class="com.android.tradefed.targetprep.DeviceSetup">
+        <option name="screen-saver" value="off" />
+        <option name="screen-always-on" value="on" />
+        <option name="screen-adaptive-brightness" value="off" />
+        <option name="screen-brightness" value="30" />
+        <option name="disable-doze" value="true" />
+        <option name="restore-settings" value="true" />
+    </target_preparer>
+
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="run-command" value="svc power stayon true" />
+    </target_preparer>
 
     <target_preparer class="com.android.tradefed.targetprep.InstallApkSetup">
         <option name="apk-path" value="/google/data/ro/teams/tradefed/testdata/media/GtsMediaTestCases-nyc.apk" />
