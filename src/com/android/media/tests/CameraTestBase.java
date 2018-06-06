@@ -282,11 +282,12 @@ public class CameraTestBase implements IDeviceTest, IRemoteTest, IConfigurationR
          * @param testMetrics a {@link Map} of the metrics emitted
          */
         @Override
-        public void testEnded(TestDescription test, long endTime, Map<String, String> testMetrics) {
+        public void testEnded(
+                TestDescription test, long endTime, HashMap<String, Metric> testMetrics) {
             super.testEnded(test, endTime, testMetrics);
-            handleMetricsOnTestEnded(test, testMetrics);
+            handleMetricsOnTestEnded(test, TfMetricProtoUtil.compatibleConvert(testMetrics));
             stopDumping(test);
-            mListener.testEnded(test, endTime, TfMetricProtoUtil.upgradeConvert(testMetrics));
+            mListener.testEnded(test, endTime, testMetrics);
         }
 
         @Override
