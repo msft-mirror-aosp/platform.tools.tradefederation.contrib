@@ -13,23 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.tradefed.targetprep;
+package com.android.media.tests;
 
-import com.android.ddmlib.Log;
-import com.android.tradefed.build.IBuildInfo;
-import com.android.tradefed.device.ITestDevice;
+/** Exception used to indicate test failure. */
+public class TestFailureException extends RuntimeException {
+   static final long serialVersionUID = 1L;
 
-/**
- * Placeholder empty implementation of a {@link ITargetPreparer}.
- */
-// TODO: Delete when real target preparers live here.
-public class ExampleTargetPreparer extends BaseTargetPreparer {
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setUp(ITestDevice device, IBuildInfo buildInfo) throws TargetSetupError {
-        Log.d("TargetPreparer", "Not doing anything because I'm just an example");
+    public TestFailureException() {
+        super();
     }
 }
