@@ -52,7 +52,7 @@ public class SetPackagesRecentlyUsed extends BaseTargetPreparer implements ITarg
     @Override
     public void setUp(ITestDevice device, IBuildInfo buildInfo)
             throws TargetSetupError, BuildError, DeviceNotAvailableException {
-        long deviceTimeMillis = TimeUnit.SECONDS.toMillis(device.getDeviceDate());
+        long deviceTimeMillis = device.getDeviceDate();
         long deviceRecentMillis = deviceTimeMillis - mRecentTimeMillis;
         StringBuilder builder = new StringBuilder();
         builder.append("PACKAGE_USAGE__VERSION_1\n");
