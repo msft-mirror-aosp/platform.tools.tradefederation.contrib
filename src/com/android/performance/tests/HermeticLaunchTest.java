@@ -85,16 +85,16 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     }
 
     private static final String TOTALLAUNCHTIME = "totalLaunchTime";
-    private static final String LOGCAT_CMD = "logcat -v threadtime ActivityManager:* *:s";
+    private static final String LOGCAT_CMD = "logcat -v threadtime ActivityTaskManager:* *:s";
     private static final String LAUNCH_PREFIX =
             "^\\d*-\\d*\\s*\\d*:\\d*:\\d*.\\d*\\s*\\d*\\s*"
-                    + "\\d*\\s*I ActivityManager: Displayed\\s*";
+                    + "\\d*\\s*I ActivityTaskManager: Displayed\\s*";
     private static final String LAUNCH_SUFFIX =
             ":\\s*\\+(?<launchtime>.[a-zA-Z\\d]*)\\s*" + "(?<totallaunch>.*)\\s*$";
     private static final Pattern LAUNCH_ENTRY =
             Pattern.compile(
                     "^\\d*-\\d*\\s*\\d*:\\d*:\\d*."
-                            + "\\d*\\s*\\d*\\s*\\d*\\s*I ActivityManager: Displayed\\s*(?<launchinfo>.*)\\s*$");
+                            + "\\d*\\s*\\d*\\s*\\d*\\s*I ActivityTaskManager: Displayed\\s*(?<launchinfo>.*)\\s*$");
     private static final Pattern TRACE_ENTRY1 =
             Pattern.compile(
                     "^[^-]*-(?<tid>\\d+)\\s+\\[\\d+\\]\\s+\\S{4}\\s+"
@@ -292,7 +292,7 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
 
         /*
          * Sample line format in logcat
-         * 06-17 16:55:49.6 60 642 I ActivityManager: Displayed pkg/.activity: +Tms (total +9s9ms)
+         * 06-17 16:55:49.6 60 642 I ActivityTaskManager: Displayed pkg/.activity: +Tms (total +9s9ms)
          */
         for (String activityName : activitySet) {
             int lastIndex = activityName.lastIndexOf(".");
