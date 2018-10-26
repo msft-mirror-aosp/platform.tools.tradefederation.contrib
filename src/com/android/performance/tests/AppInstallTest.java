@@ -16,17 +16,23 @@
 
 package com.android.performance.tests;
 
+import com.android.tradefed.build.BuildInfo;
 import com.android.tradefed.config.Option;
 import com.android.tradefed.config.OptionClass;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
+import com.android.tradefed.invoker.IInvocationContext;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.testtype.IDeviceTest;
+import com.android.tradefed.testtype.IInvocationContextReceiver;
 import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.util.AaptParser;
 import com.android.tradefed.util.RunUtil;
 import com.android.tradefed.util.proto.TfMetricProtoUtil;
+
+import com.google.common.base.Strings;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,58 +44,68 @@ import org.junit.Assert;
 // Test framework that measures the install time for all apk files located under a given directory.
 // The test needs aapt to be in its path in order to determine the package name of the apk. The
 // package name is needed to clean up after the test is done.
-public class AppInstallTest implements IDeviceTest, IRemoteTest {
+public class AppInstallTest implements IDeviceTest, IRemoteTest, IInvocationContextReceiver {
+
+    @Option(name = "test-apk-dir", description = "Directory that contains the test apks.")
+    private String mTestApkPath;
 
     @Option(
-            name = "test-apk-dir",
-            description = "Directory that contains the test apks.",
-            importance = Option.Importance.ALWAYS)
-    private String mTestApkPath;
+        name = "test-apk-test-resource-name",
+        description =
+                "Test resource name for test apks."
+                        + "This is used when test apks are provided by GCSTestResourceProvider."
+    )
+    private String mTestApkTestResourceName;
 
     @Option(name = "test-label", description = "Unique test identifier label.")
     private String mTestLabel = "AppInstallPerformance";
 
     @Option(
-            name = "test-start-delay",
-            description = "Delay in ms to wait for before starting the install test.")
+        name = "test-start-delay",
+        description = "Delay in ms to wait for before starting the install test."
+    )
     private long mTestStartDelay = 60000;
 
     // TODO: remove this once prod is updated.
     @Option(name = "test-use-dex-metedata")
     private boolean mUseDexMetadataMisspelled = false;
-
     @Option(name = "test-dex-metedata-variant")
     private String mDexMetadataVariantMisspelled = "";
 
     @Option(
-            name = "test-use-dex-metadata",
-            description = "If the test should install the dex metadata files.")
+        name = "test-use-dex-metadata",
+        description = "If the test should install the dex metadata files."
+    )
     private boolean mUseDexMetadata = false;
 
     @Option(
-            name = "test-delay-between-installs",
-            description = "Delay in ms to wait for before starting the install test.")
+        name = "test-delay-between-installs",
+        description = "Delay in ms to wait for before starting the install test."
+    )
     private long mTestDelayBetweenInstalls = 5000;
 
     @Option(
-            name = "test-dex-metadata-variant",
-            description =
-                    "The dex metadata variant that should be used."
-                            + "When specified, the DM file name for foo.apk will be "
-                            + "constructed as fooVARIANT.dm")
+        name = "test-dex-metadata-variant",
+        description =
+                "The dex metadata variant that should be used."
+                        + "When specified, the DM file name for foo.apk will be "
+                        + "constructed as fooVARIANT.dm"
+    )
     private String mDexMetadataVariant = "";
 
     @Option(name = "test-uninstall-after", description = "If the apk should be uninstalled after.")
     private boolean mUninstallAfter = true;
 
     @Option(
-            name = "package-list",
-            description =
-                    "If given, filters the apk files in the test dir based on the list of "
-                            + "packages. It checks that the apk name is packageName-version.apk")
+        name = "package-list",
+        description =
+                "If given, filters the apk files in the test dir based on the list of "
+                        + "packages. It checks that the apk name is packageName-version.apk"
+    )
     private List<String> mPackages = new ArrayList<String>();
 
     private ITestDevice mDevice;
+    private IInvocationContext mContext;
 
     /*
      * {@inheritDoc}
@@ -105,6 +121,11 @@ public class AppInstallTest implements IDeviceTest, IRemoteTest {
     @Override
     public ITestDevice getDevice() {
         return mDevice;
+    }
+
+    @Override
+    public void setInvocationContext(IInvocationContext invocationContext) {
+        mContext = invocationContext;
     }
 
     /*
@@ -125,9 +146,7 @@ public class AppInstallTest implements IDeviceTest, IRemoteTest {
             RunUtil.getDefault().sleep(mTestStartDelay);
         }
 
-        Assert.assertFalse(mTestApkPath.isEmpty());
-        File apkDir = new File(mTestApkPath);
-        Assert.assertTrue(apkDir.isDirectory());
+        File apkDir = getApkDir();
         // Find all apks in directory.
         String[] files = apkDir.list();
         Map<String, String> metrics = new HashMap<String, String>();
@@ -151,6 +170,25 @@ public class AppInstallTest implements IDeviceTest, IRemoteTest {
         } finally {
             reportMetrics(listener, mTestLabel, metrics);
         }
+    }
+
+    /**
+     * Get the apk dir.
+     *
+     * @return the apk dir.
+     */
+    private File getApkDir() {
+        Assert.assertFalse(
+                Strings.isNullOrEmpty(mTestApkPath)
+                        && Strings.isNullOrEmpty(mTestApkTestResourceName));
+        File apkDir = null;
+        if (!Strings.isNullOrEmpty(mTestApkTestResourceName)) {
+            apkDir = BuildInfo.getTestResource(mContext.getBuildInfos(), mTestApkTestResourceName);
+        } else {
+            apkDir = new File(mTestApkPath);
+        }
+        Assert.assertTrue(apkDir.isDirectory());
+        return apkDir;
     }
 
     /**
