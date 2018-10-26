@@ -14,14 +14,14 @@
 
 LOCAL_PATH := $(call my-dir)
 COMPATIBILITY.tradefed_tests_dir := \
-  $(COMPATIBILITY.tradefed_tests_dir) $(LOCAL_PATH)/res/config
+  $(COMPATIBILITY.tradefed_tests_dir) $(LOCAL_PATH)/../res/config
 
 include $(CLEAR_VARS)
 
 # Only compile source java files in this lib.
-LOCAL_SRC_FILES := $(call all-java-files-under, src)
+LOCAL_SRC_FILES := $(call all-java-files-under, ../src)
 
-LOCAL_JAVA_RESOURCE_DIRS := res
+LOCAL_JAVA_RESOURCE_DIRS := ../res
 
 LOCAL_JAVACFLAGS += -g -Xlint
 -include tools/tradefederation/core/error_prone_rules.mk
@@ -30,8 +30,6 @@ LOCAL_MODULE := tradefed-contrib
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_JAVA_LIBRARIES := tradefed loganalysis tools-common-prebuilt
-
-LOCAL_JAR_MANIFEST := MANIFEST.mf
 
 include $(BUILD_HOST_JAVA_LIBRARY)
 
