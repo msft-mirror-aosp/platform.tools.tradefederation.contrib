@@ -147,6 +147,9 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     @Option(name = "launch-count", description = "number of time to launch the each activity")
     private int mlaunchCount = 10;
 
+    @Option(name = "trace-category", description = "comma separated list of trace categories")
+    private String mtraceCategory = "am,view,gfx";
+
     @Option(name = "save-atrace", description = "Upload the atrace file in permanent storage")
     private boolean mSaveAtrace = false;
 
@@ -266,6 +269,7 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
                 new RemoteAndroidTestRunner(packageName, runnerName, device);
         runner.addInstrumentationArg("targetpackage", mtargetPackage);
         runner.addInstrumentationArg("launchcount", mlaunchCount + "");
+        runner.addInstrumentationArg("tracecategory", mtraceCategory);
         if (!mInstantAppUrl.isEmpty()) {
             runner.addInstrumentationArg("instanturl", mInstantAppUrl);
         }
