@@ -25,7 +25,7 @@ LOCAL_JAVACFLAGS += -g -Xlint
 
 LOCAL_MODULE := tf-contrib-tests
 LOCAL_MODULE_TAGS := optional
-LOCAL_JAVA_LIBRARIES := tradefed tradefed-contrib easymock
+LOCAL_JAVA_LIBRARIES := tradefed tradefed-contrib easymock mockito objenesis
 
 include $(BUILD_HOST_JAVA_LIBRARY)
 
