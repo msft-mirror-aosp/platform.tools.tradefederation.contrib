@@ -18,6 +18,9 @@ package com.android.tradefed.prodtests;
 import com.android.build.tests.ImageStatsTest;
 import com.android.continuous.SmokeTestTest;
 import com.android.monkey.MonkeyBaseTest;
+import com.android.regression.tests.DetectRegressionTest;
+import com.android.regression.tests.MetricsTest;
+import com.android.regression.tests.MetricsXmlParserTest;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -38,7 +41,12 @@ import org.junit.runners.Suite.SuiteClasses;
     SmokeTestTest.class,
 
     // monkey
-    MonkeyBaseTest.class
+    MonkeyBaseTest.class,
+
+    // regression
+    DetectRegressionTest.class,
+    MetricsTest.class,
+    MetricsXmlParserTest.class,
 })
 public class UnitTests {
     // empty of purpose
