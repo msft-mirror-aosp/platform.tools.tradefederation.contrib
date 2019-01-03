@@ -13,9 +13,7 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<configuration description="Pull the files from the device, process it and add it to the logs." >
-    <include name="template/collectors/file-puller" />
-    <include name="template/collectors/incident-puller" />
-    <include name="template/collectors/perfetto-puller" />
+<configuration description="Pull, process, and report incident reports from the device." >
+    <metrics_collector class="com.android.tradefed.device.metric.IncidentReportCollector" />
 </configuration>
 
