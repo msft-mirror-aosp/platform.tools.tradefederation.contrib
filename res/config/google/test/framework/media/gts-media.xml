@@ -28,6 +28,6 @@
         <option name="package" value="com.google.android.media.gts" />
         <option name="runtime-hint" value="2h" />
         <option name="shell-timeout" value="2000000" />
-        <option name="test-timeout" value="600000" />
+        <option name="test-timeout" value="900000" />
     </test>
 </configuration>
