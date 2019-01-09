@@ -34,6 +34,8 @@ import com.android.tradefed.result.TestResult;
 import com.android.tradefed.testtype.IDeviceTest;
 import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.util.FileUtil;
+import com.android.tradefed.util.ListInstrumentationParser;
+import com.android.tradefed.util.ListInstrumentationParser.InstrumentationTarget;
 import com.android.tradefed.util.StreamUtil;
 import com.android.tradefed.util.proto.TfMetricProtoUtil;
 
@@ -122,7 +124,7 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     private static final long MILLI_TO_MICRO = 1000;
 
     @Option(name = "runner", description = "The instrumentation test runner class name to use.")
-    private String mRunnerName = "android.support.test.runner.AndroidJUnitRunner";
+    private String mRunnerName = "";
 
     @Option(
             name = "package",
@@ -168,6 +170,7 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     private Map<String, String> mActivityTraceFileMap;
     private Map<String, Map<String, String>> mActivityTimeResultMap = new HashMap<>();
     private Map<String, String> activityErrMsg = new HashMap<>();
+    private ListInstrumentationParser mListInstrumentationParser = null;
 
     @Override
     public void run(ITestInvocationListener listener) throws DeviceNotAvailableException {
@@ -194,6 +197,10 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
 
             // Remove if there is already existing atrace_logs folder
             mDevice.executeShellCommand("rm -rf ${EXTERNAL_STORAGE}/atrace_logs");
+
+            if(mRunnerName.isEmpty()) {
+                mRunnerName = queryRunnerName();
+            }
 
             mRunner =
                     createRemoteAndroidTestRunner(mPackageName, mRunnerName, mDevice.getIDevice());
@@ -280,6 +287,35 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
             runner.addInstrumentationArg("recordtrace", "false");
         }
         return runner;
+    }
+
+    /**
+     * Get the {@link ListInstrumentationParser} used to parse 'pm list instrumentation' queries.
+     */
+    protected ListInstrumentationParser getListInstrumentationParser() {
+        if (mListInstrumentationParser == null) {
+            mListInstrumentationParser = new ListInstrumentationParser();
+        }
+        return mListInstrumentationParser;
+    }
+
+    /**
+     * Query the device for a test runner to use.
+     *
+     * @return the first test runner name that matches the package or null if we don't find any.
+     * @throws DeviceNotAvailableException
+     */
+    protected String queryRunnerName() throws DeviceNotAvailableException {
+        ListInstrumentationParser parser = getListInstrumentationParser();
+        getDevice().executeShellCommand("pm list instrumentation", parser);
+
+        for (InstrumentationTarget target : parser.getInstrumentationTargets()) {
+            if (mPackageName.equals(target.packageName)) {
+                return target.runnerName;
+            }
+        }
+        throw new RuntimeException(
+                String.format("Unable to determine runner name for package: %s", mPackageName));
     }
 
     /**
