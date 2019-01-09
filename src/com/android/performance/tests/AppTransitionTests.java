@@ -37,6 +37,8 @@ import com.android.tradefed.result.TestRunResult;
 import com.android.tradefed.testtype.IDeviceTest;
 import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.util.FileUtil;
+import com.android.tradefed.util.ListInstrumentationParser;
+import com.android.tradefed.util.ListInstrumentationParser.InstrumentationTarget;
 import com.android.tradefed.util.SimpleStats;
 import com.android.tradefed.util.StreamUtil;
 import com.android.tradefed.util.ZipUtil;
@@ -127,7 +129,7 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
     private String mTraceDirectory = null;
 
     @Option(name = "runner", description = "The instrumentation test runner class name to use.")
-    private String mRunnerName = "android.support.test.runner.AndroidJUnitRunner";
+    private String mRunnerName = "";
 
     @Option(name = "run-arg", description = "Additional test specific arguments to provide.")
     private Map<String, String> mArgMap = new LinkedHashMap<String, String>();
@@ -162,6 +164,7 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
     private LogcatReceiver mLaunchEventsLogs = null;
     private EventsLogParser mEventsLogParser = new EventsLogParser();
     private ITestInvocationListener mListener = null;
+    private ListInstrumentationParser mListInstrumentationParser = null;
 
     @Override
     public void run(ITestInvocationListener listener) throws DeviceNotAvailableException {
@@ -309,6 +312,9 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
     IRemoteAndroidTestRunner createRemoteAndroidTestRunner(
             String testName, String launchApps, String preLaunchApps)
             throws DeviceNotAvailableException {
+        if(mRunnerName.isEmpty()) {
+            mRunnerName = queryRunnerName();
+        }
         RemoteAndroidTestRunner runner =
                 new RemoteAndroidTestRunner(PACKAGE_NAME, mRunnerName, mDevice.getIDevice());
         runner.setMethodName(CLASS_NAME, testName);
@@ -326,6 +332,35 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
             runner.addInstrumentationArg("trace_directory", mTraceDirectory);
         }
         return runner;
+    }
+
+    /**
+     * Get the {@link ListInstrumentationParser} used to parse 'pm list instrumentation' queries.
+     */
+    protected ListInstrumentationParser getListInstrumentationParser() {
+        if (mListInstrumentationParser == null) {
+            mListInstrumentationParser = new ListInstrumentationParser();
+        }
+        return mListInstrumentationParser;
+    }
+
+    /**
+     * Query the device for a test runner to use.
+     *
+     * @return the first test runner name that matches the package or null if we don't find any.
+     * @throws DeviceNotAvailableException
+     */
+    protected String queryRunnerName() throws DeviceNotAvailableException {
+        ListInstrumentationParser parser = getListInstrumentationParser();
+        getDevice().executeShellCommand("pm list instrumentation", parser);
+
+        for (InstrumentationTarget target : parser.getInstrumentationTargets()) {
+            if (PACKAGE_NAME.equals(target.packageName)) {
+                return target.runnerName;
+            }
+        }
+        throw new RuntimeException(
+                String.format("Unable to determine runner name for package: %s", PACKAGE_NAME));
     }
 
     /**
