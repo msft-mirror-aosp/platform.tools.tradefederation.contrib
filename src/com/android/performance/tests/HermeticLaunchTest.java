@@ -87,16 +87,18 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     }
 
     private static final String TOTALLAUNCHTIME = "totalLaunchTime";
-    private static final String LOGCAT_CMD = "logcat -v threadtime ActivityTaskManager:* *:s";
+    private static final String LOGCAT_CMD = "logcat -v threadtime "
+            + "ActivityManager:*  ActivityTaskManager:* *:s";
     private static final String LAUNCH_PREFIX =
             "^\\d*-\\d*\\s*\\d*:\\d*:\\d*.\\d*\\s*\\d*\\s*"
-                    + "\\d*\\s*I ActivityTaskManager: Displayed\\s*";
+                    + "\\d*\\s*I (ActivityTaskManager|ActivityManager): Displayed\\s*";
     private static final String LAUNCH_SUFFIX =
             ":\\s*\\+(?<launchtime>.[a-zA-Z\\d]*)\\s*" + "(?<totallaunch>.*)\\s*$";
     private static final Pattern LAUNCH_ENTRY =
             Pattern.compile(
                     "^\\d*-\\d*\\s*\\d*:\\d*:\\d*."
-                            + "\\d*\\s*\\d*\\s*\\d*\\s*I ActivityTaskManager: Displayed\\s*(?<launchinfo>.*)\\s*$");
+                            + "\\d*\\s*\\d*\\s*\\d*\\s*I (ActivityTaskManager|ActivityManager):"
+                            + " Displayed\\s*(?<launchinfo>.*)\\s*$");
     private static final Pattern TRACE_ENTRY1 =
             Pattern.compile(
                     "^[^-]*-(?<tid>\\d+)\\s+\\[\\d+\\]\\s+\\S{4}\\s+"
@@ -108,8 +110,8 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     private static final Pattern ATRACE_BEGIN =
             Pattern.compile("tracing_mark_write: B\\|(?<pid>\\d+)\\|(?<name>.+)");
     // Matches new and old format of END time stamp.
-    // rformanceLaunc-6315  ( 6315) [007] ...1   182.622217: tracing_mark_write: E|6315
-    // rformanceLaunc-6315  ( 6315) [007] ...1   182.622217: tracing_mark_write: E
+    // rformanceLaunc-6315 ( 6315) [007] ...1 182.622217: tracing_mark_write: E|6315
+    // rformanceLaunc-6315 ( 6315) [007] ...1 182.622217: tracing_mark_write: E
     private static final Pattern ATRACE_END =
             Pattern.compile("tracing_mark_write: E\\|*(?<procid>\\d*)");
     private static final Pattern ATRACE_COUNTER =
@@ -141,9 +143,9 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     @Option(
             name = "activity-names",
             description =
-                    "Fully qualified activity "
-                            + "names separated by comma"
-                            + "If not set then all the activities will be included for launching")
+            "Fully qualified activity "
+                    + "names separated by comma"
+                    + "If not set then all the activities will be included for launching")
     private String mactivityNames = "";
 
     @Option(name = "launch-count", description = "number of time to launch the each activity")
@@ -198,7 +200,7 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
             // Remove if there is already existing atrace_logs folder
             mDevice.executeShellCommand("rm -rf ${EXTERNAL_STORAGE}/atrace_logs");
 
-            if(mRunnerName.isEmpty()) {
+            if (mRunnerName.isEmpty()) {
                 mRunnerName = queryRunnerName();
             }
 
@@ -211,8 +213,8 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
                     collectingListener.getCurrentRunResults().getTestResults().values();
             List<TestResult> testResults = new ArrayList<>(testResultsCollection);
             /*
-             * Expected Metrics : Map of <activity name>=<comma separated list of atrace file names in
-             * external storage of the device>
+             * Expected Metrics : Map of <activity name>=<comma separated list of atrace file names
+             * in external storage of the device>
              */
             mActivityTraceFileMap = testResults.get(0).getMetrics();
             Assert.assertTrue(
@@ -331,14 +333,14 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
         String line;
 
         /*
-         * Sample line format in logcat
-         * 06-17 16:55:49.6 60 642 I ActivityTaskManager: Displayed pkg/.activity: +Tms (total +9s9ms)
+         * Sample line format in logcat 06-17 16:55:49.6 60 642 I
+         * (ActivityTaskManager|ActivityManager): Displayed pkg/.activity: +Tms (total +9s9ms)
          */
         for (String activityName : activitySet) {
             int lastIndex = activityName.lastIndexOf(".");
             /*
-             * actvitySet has set of activity names in the format packageName.activityName
-             * logcat has the format packageName/.activityName --> activityAlias
+             * actvitySet has set of activity names in the format packageName.activityName logcat
+             * has the format packageName/.activityName --> activityAlias
              */
             String activityAlias = new String();
             if (mInstantAppUrl.isEmpty()) {
@@ -633,7 +635,7 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
                                 singleLaunchInfo
                                         .get(AtraceSectionOptions.DRAW.toString())
                                         .get(0)
-                                        .startTime;
+                                .startTime;
                         if (drawStartTime < secPeriod.startTime) {
                             break;
                         }
@@ -673,8 +675,8 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     /**
      * Checks whether {@code line} matches the given {@link Pattern}.
      *
-     * @return The resulting {@link Matcher} obtained by matching the {@code line} against {@code
-     *     pattern}, or null if the {@code line} does not match.
+     * @return The resulting {@link Matcher} obtained by matching the {@code line} against
+     *         {@code pattern}, or null if the {@code line} does not match.
      */
     private static Matcher matches(Pattern pattern, String line) {
         Matcher ret = pattern.matcher(line);
