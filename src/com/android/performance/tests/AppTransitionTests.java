@@ -158,6 +158,14 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
             isTimeVal = true)
     private long mTestTimeout = 45 * 60 * 1000; // default to 45 minutes
 
+    @Option(
+            name = "isolated-storage",
+            description =
+                    "If set to false, the '--no-isolated-storage' flag will be passed to the am "
+                            + "instrument command. Only works for Q or later."
+        )
+    private boolean mIsolatedStorage = true;
+
     private ITestDevice mDevice = null;
     private IRemoteAndroidTestRunner mRunner = null;
     private CollectingTestListener mLaunchListener = null;
@@ -331,6 +339,17 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
             mDevice.executeShellCommand(String.format("rm -rf %s/%s", mTraceDirectory, testName));
             runner.addInstrumentationArg("trace_directory", mTraceDirectory);
         }
+
+        String runOptions = "";
+
+        // isolated-storage flag only exists in Q and after.
+        if (!mIsolatedStorage && (getDevice().getApiLevel() >= 29
+                || "Q".equals(getDevice().getProperty("ro.build.version.release")))) {
+            runOptions += "--no-isolated-storage ";
+        }
+
+        runner.setRunOptions(runOptions);
+
         return runner;
     }
 
