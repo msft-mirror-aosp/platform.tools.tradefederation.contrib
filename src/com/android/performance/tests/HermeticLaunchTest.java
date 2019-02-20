@@ -165,6 +165,14 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     @Option(name = "instantapp-url", description = "URL used to launch instant app")
     private String mInstantAppUrl = "";
 
+    @Option(
+            name = "isolated-storage",
+            description =
+                    "If set to false, the '--no-isolated-storage' flag will be passed to the am "
+                            + "instrument command. Only works for Q or later."
+        )
+    private boolean mIsolatedStorage = true;
+
     private ITestDevice mDevice = null;
     private IRemoteAndroidTestRunner mRunner;
     private LogcatReceiver mLogcat;
@@ -288,6 +296,17 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
         if (!mSaveAtrace) {
             runner.addInstrumentationArg("recordtrace", "false");
         }
+
+        String runOptions = "";
+
+        // isolated-storage flag only exists in Q and after.
+        if (!mIsolatedStorage && (getDevice().getApiLevel() >= 29
+                || "Q".equals(getDevice().getProperty("ro.build.version.release")))) {
+            runOptions += "--no-isolated-storage ";
+        }
+
+        runner.setRunOptions(runOptions);
+
         return runner;
     }
 
