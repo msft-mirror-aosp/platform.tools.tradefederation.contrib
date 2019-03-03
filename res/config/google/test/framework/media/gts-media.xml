@@ -30,5 +30,6 @@
         <option name="runtime-hint" value="2h" />
         <option name="shell-timeout" value="2000000" />
         <option name="test-timeout" value="1200000" />
+        <option name="isolated-storage" value="false" />
     </test>
 </configuration>
