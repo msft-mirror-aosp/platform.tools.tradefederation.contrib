@@ -84,7 +84,7 @@ public class StartupMetricsTest implements IDeviceTest, IRemoteTest {
         /*Not using /proc/uptime to get the initial boot time
         because it includes delays running 'permission utils',
         and the CPU throttling waiter*/
-        Map<String, String> runMetrics = new HashMap<String, String>();
+        Map<String, String> runMetrics = new HashMap<>();
         // Initial reboot
         mTestDevice.rebootIntoBootloader();
         mTestDevice.setUseFastbootErase(false);
@@ -166,7 +166,7 @@ public class StartupMetricsTest implements IDeviceTest, IRemoteTest {
      * @return output the converted {@link Map}
      */
     Map<String, String> convertMap(MemInfoItem item) {
-        Map<String, String> output = new HashMap<String, String>();
+        Map<String, String> output = new HashMap<>();
         for (String key : item.keySet()) {
             output.put(key, item.get(key).toString());
         }
@@ -196,9 +196,9 @@ public class StartupMetricsTest implements IDeviceTest, IRemoteTest {
      */
     void parseProcRankMap(ITestInvocationListener listener, ProcrankItem procrank) {
         // final maps for pss, rss, and uss.
-        Map<String, String> pssOutput = new HashMap<String, String>();
-        Map<String, String> rssOutput = new HashMap<String, String>();
-        Map<String, String> ussOutput = new HashMap<String, String>();
+        Map<String, String> pssOutput = new HashMap<>();
+        Map<String, String> rssOutput = new HashMap<>();
+        Map<String, String> ussOutput = new HashMap<>();
         // total number of processes.
         Integer numProcess = 0;
         // aggregate pss, rss, uss across all processes.
