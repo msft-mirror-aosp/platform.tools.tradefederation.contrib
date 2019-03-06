@@ -92,7 +92,7 @@ public class AppInstallTest implements IDeviceTest, IRemoteTest {
                 "If given, filters the apk files in the test dir based on the list of "
                         + "packages. It checks that the apk name is packageName-version.apk"
     )
-    private List<String> mPackages = new ArrayList<String>();
+    private List<String> mPackages = new ArrayList<>();
 
     private ITestDevice mDevice;
 
