@@ -78,7 +78,7 @@ public class GLBenchmarkTest implements IDeviceTest, IRemoteTest {
     private String mGlbenchmarkAllResultXmlPath = mGlbenchmarkCacheDir + "results*.xml";
 
     private static Map<String, String> createMetricsKeyMap() {
-        Map<String, String> result = new HashMap<String, String>();
+        Map<String, String> result = new HashMap<>();
         result.put("Fill rate - C24Z16", "fill-rate");
         result.put("Fill rate - C24Z16 Offscreen", "fill-rate-offscreen");
         result.put("Triangle throughput: Textured - C24Z16", "triangle-c24z16");
@@ -147,7 +147,7 @@ public class GLBenchmarkTest implements IDeviceTest, IRemoteTest {
 
         boolean isTimedOut = false;
         boolean isResultGenerated = false;
-        Map<String, String> metrics = new HashMap<String, String>();
+        Map<String, String> metrics = new HashMap<>();
         String errMsg = null;
 
         String deviceModel = device.executeShellCommand("getprop ro.product.model");
@@ -214,7 +214,7 @@ public class GLBenchmarkTest implements IDeviceTest, IRemoteTest {
      * @return a {@link HashMap} that contains metrics key and result
      */
     private Map<String, String> parseResultXml(File resultXml) {
-        Map<String, String> benchmarkResult = new HashMap<String, String>();
+        Map<String, String> benchmarkResult = new HashMap<>();
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         Document doc = null;
         try {

@@ -95,7 +95,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
 
     private ITestDevice mTestDevice = null;
     private ITestInvocationListener mlistener = null;
-    private Map<String, String> mMetrics = new HashMap<String, String>();
+    private Map<String, String> mMetrics = new HashMap<>();
 
     @Override
     public void run(ITestInvocationListener listener) throws DeviceNotAvailableException {
