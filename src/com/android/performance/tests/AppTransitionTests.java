@@ -540,7 +540,7 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
     /**
      * Analyze and report the hot launch transition delay from launcher and app to home transition
      * delay. Keep track of launcher to app transition delay which immediately followed by app to
-     * home transition. Skip the intitial cold launch on the apps.
+     * home transition. Skip the initial cold launch on the apps.
      *
      * @param transitionDelayItems
      */
@@ -624,7 +624,7 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
     }
 
     /**
-     * Analyze and report recents to hot app launch delay info. Skip the intitial cold launch
+     * Analyze and report recents to hot app launch delay info. Skip the initial cold launch
      * transition delay on the apps. Also the first launch cannot always be the cold launch because
      * the apps could be part of preapps list. The transition delay is tracked based on recents to
      * apps transition delay items.
@@ -736,7 +736,7 @@ public class AppTransitionTests implements IRemoteTest, IDeviceTest {
     }
 
     /**
-     * Reverse and returnthe given appName,componentName info map to componenetName,appName info
+     * Reverse and return the given appName,componentName info map to componenetName,appName info
      * map.
      */
     private Map<String, String> reverseAppCmpInfoMap(Map<String, String> appNameCmpNameMap) {
