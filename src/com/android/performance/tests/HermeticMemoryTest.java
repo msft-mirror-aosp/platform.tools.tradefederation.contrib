@@ -261,7 +261,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
 
     /**
      * Method to parse the free memory based on total memory available from proc/meminfo and private
-     * dirty and private clean information of the cached processess from dumpsys meminfo.
+     * dirty and private clean information of the cached processes from dumpsys meminfo.
      */
     private void calculateFreeMem() throws DeviceNotAvailableException {
         String memInfo = mTestDevice.executeShellCommand(PROC_MEMINFO);
