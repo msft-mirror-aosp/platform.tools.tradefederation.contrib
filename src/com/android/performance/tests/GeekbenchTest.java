@@ -66,7 +66,7 @@ public class GeekbenchTest implements IDeviceTest, IRemoteTest {
     private ITestDevice mDevice;
 
     private static Map<String, String> createMetricsKeyMap() {
-        Map<String, String> result = new HashMap<String, String>();
+        Map<String, String> result = new HashMap<>();
         result.put(OVERALL_SCORE_NAME, "overall");
         result.put("Integer", "integer");
         result.put("Floating Point", "floating-point");
@@ -108,7 +108,7 @@ public class GeekbenchTest implements IDeviceTest, IRemoteTest {
         listener.testStarted(testId);
 
         long testStartTime = System.currentTimeMillis();
-        Map<String, String> metrics = new HashMap<String, String>();
+        Map<String, String> metrics = new HashMap<>();
         String errMsg = null;
 
         // start geekbench and wait for test to complete
@@ -155,7 +155,7 @@ public class GeekbenchTest implements IDeviceTest, IRemoteTest {
     }
 
     private Map<String, String> parseResultJSON(File resultJson) {
-        Map<String, String> benchmarkResult = new HashMap<String, String>();
+        Map<String, String> benchmarkResult = new HashMap<>();
         try {
             BufferedReader bufferedReader = new BufferedReader(new FileReader(resultJson));
             String line = bufferedReader.readLine();
