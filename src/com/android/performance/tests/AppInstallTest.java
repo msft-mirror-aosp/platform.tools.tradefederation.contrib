@@ -134,7 +134,7 @@ public class AppInstallTest implements IDeviceTest, IRemoteTest {
 
         // Find all apks in directory.
         String[] files = mTestApkPath.list();
-        Map<String, String> metrics = new HashMap<String, String>();
+        Map<String, String> metrics = new HashMap<>();
         try {
             for (String fileName : files) {
                 if (!fileName.endsWith(".apk")) {
