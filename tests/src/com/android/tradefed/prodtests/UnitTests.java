@@ -21,6 +21,7 @@ import com.android.monkey.MonkeyBaseTest;
 import com.android.regression.tests.DetectRegressionTest;
 import com.android.regression.tests.MetricsTest;
 import com.android.regression.tests.MetricsXmlParserTest;
+import com.android.scenario.AppSetupTest;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -37,7 +38,7 @@ import org.junit.runners.Suite.SuiteClasses;
     // build.tests
     ImageStatsTest.class,
 
-    // Continuous
+    // continuous
     SmokeTestTest.class,
 
     // monkey
@@ -47,6 +48,9 @@ import org.junit.runners.Suite.SuiteClasses;
     DetectRegressionTest.class,
     MetricsTest.class,
     MetricsXmlParserTest.class,
+
+    // scenario
+    AppSetupTest.class,
 })
 public class UnitTests {
     // empty of purpose
