@@ -16,6 +16,10 @@
 
 package com.android.framework.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import com.android.ddmlib.testrunner.IRemoteAndroidTestRunner;
 import com.android.ddmlib.testrunner.RemoteAndroidTestRunner;
 import com.android.tradefed.device.DeviceNotAvailableException;
@@ -24,8 +28,6 @@ import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.result.CollectingTestListener;
 
-import org.junit.Assert;
-
 import java.io.File;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,7 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** Set of tests that verify host side install cases */
-public class PackageManagerHostTestUtils extends Assert {
+public class PackageManagerHostTestUtils {
     private ITestDevice mDevice = null;
     private boolean mEmulatedExternalStorage = false;
 
