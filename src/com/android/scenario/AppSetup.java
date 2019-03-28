@@ -15,16 +15,66 @@
  */
 package com.android.scenario;
 
+import com.android.tradefed.config.Option;
 import com.android.tradefed.config.OptionClass;
+import com.android.tradefed.device.DeviceNotAvailableException;
+import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.testtype.AndroidJUnitTest;
+
+import com.google.common.annotations.VisibleForTesting;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /** A test that runs app setup scenarios only. */
 @OptionClass(alias = "app-setup")
-public final class AppSetup extends AndroidJUnitTest {
+public class AppSetup extends AndroidJUnitTest {
+    @Option(
+        name = "drop-cache-when-finished",
+        description = "Clear the cache when setup is finished."
+    )
+    private boolean mDropCacheWhenFinished = false;
+
+    @Option(
+        name = "apps-to-kill-when-finished",
+        description = "List of app package names to kill when setup is finished."
+    )
+    private List<String> mAppsToKillWhenFinished = new ArrayList<>();
+
+    static final String DROP_CACHE_COMMAND = "echo 3 > /proc/sys/vm/drop_caches";
+    static final String KILL_APP_COMMAND_TEMPLATE = "am force-stop %s";
+
     public AppSetup() {
         super();
         // Specifically target the app setup scenarios.
         setPackageName("android.platform.test.scenario");
         addIncludeAnnotation("android.platform.test.scenario.annotation.AppSetup");
+    }
+
+    /**
+     * Run the test the same way the superclass does and perform the additional setup/cleanup steps.
+     */
+    @Override
+    public void run(final ITestInvocationListener listener) throws DeviceNotAvailableException {
+        runTest(listener);
+
+        // TODO(harrytczhang@): Switch to a solution based on test rule injection after b/123281375.
+        if (mDropCacheWhenFinished) {
+            getDevice().executeShellCommand(DROP_CACHE_COMMAND);
+        }
+        for (String packageName : mAppsToKillWhenFinished) {
+            getDevice().executeShellCommand(String.format(KILL_APP_COMMAND_TEMPLATE, packageName));
+        }
+    }
+
+    /**
+     * Enable tests to stub out the actual run.
+     *
+     * @hide
+     */
+    @VisibleForTesting
+    protected void runTest(final ITestInvocationListener listener)
+            throws DeviceNotAvailableException {
+        super.run(listener);
     }
 }
