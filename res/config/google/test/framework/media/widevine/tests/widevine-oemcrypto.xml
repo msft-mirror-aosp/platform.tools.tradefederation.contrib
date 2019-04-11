@@ -4,10 +4,10 @@
 <configuration description="Downloads build, flashes on device, and runs Widevine Modular DRM tests">
     <option name="test-tag" value="widevineOemcrypto" />
     <target_preparer class="com.android.tradefed.targetprep.TestFilePushSetup">
-        <option name="test-file-name" value="bin/oemcrypto_test" />
+        <option name="test-file-name" value="nativetest/oemcrypto_test" />
     </target_preparer>
     <test class="com.android.tradefed.testtype.GTest">
-        <option name="native-test-device-path" value="/data/bin" />
+        <option name="native-test-device-path" value="/data/nativetest" />
         <option name="module-name" value="oemcrypto_test" />
         <option name="negative-testname-filter" value="OEMCryptoKeyboxTest.GetKeyDataNullPointer" />
         <option name="before-test-cmd" value="pm disable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService" />
@@ -17,7 +17,7 @@
         <option name="native-test-timeout" value="600000" />
     </test>
     <test class="com.android.tradefed.testtype.GTest">
-        <option name="native-test-device-path" value="/data/bin" />
+        <option name="native-test-device-path" value="/data/nativetest" />
         <option name="module-name" value="oemcrypto_test" />
         <option name="positive-testname-filter" value="OEMCryptoKeyboxTest.GetKeyDataNullPointer" />
         <option name="before-test-cmd" value="pm disable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService" />
