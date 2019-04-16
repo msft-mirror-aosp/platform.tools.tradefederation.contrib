@@ -92,7 +92,7 @@ public class AppInstallTest implements IDeviceTest, IRemoteTest {
                 "If given, filters the apk files in the test dir based on the list of "
                         + "packages. It checks that the apk name is packageName-version.apk"
     )
-    private List<String> mPackages = new ArrayList<String>();
+    private List<String> mPackages = new ArrayList<>();
 
     private ITestDevice mDevice;
 
@@ -134,7 +134,7 @@ public class AppInstallTest implements IDeviceTest, IRemoteTest {
 
         // Find all apks in directory.
         String[] files = mTestApkPath.list();
-        Map<String, String> metrics = new HashMap<String, String>();
+        Map<String, String> metrics = new HashMap<>();
         try {
             for (String fileName : files) {
                 if (!fileName.endsWith(".apk")) {

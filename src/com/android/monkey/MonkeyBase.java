@@ -393,7 +393,8 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest, IRetriableTest {
         } finally {
             // Wait for device to recover if it's not online.  If it hasn't recovered, ignore.
             try {
-                mTestDevice.waitForDeviceOnline(2 * 60 * 1000);
+                mTestDevice.waitForDeviceOnline();
+                mTestDevice.enableAdbRoot();
                 duration = System.currentTimeMillis() - start;
                 dateAfter = new Date();
                 uptimeAfter = getUptime();

@@ -95,7 +95,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
 
     private ITestDevice mTestDevice = null;
     private ITestInvocationListener mlistener = null;
-    private Map<String, String> mMetrics = new HashMap<String, String>();
+    private Map<String, String> mMetrics = new HashMap<>();
 
     @Override
     public void run(ITestInvocationListener listener) throws DeviceNotAvailableException {
@@ -261,7 +261,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
 
     /**
      * Method to parse the free memory based on total memory available from proc/meminfo and private
-     * dirty and private clean information of the cached processess from dumpsys meminfo.
+     * dirty and private clean information of the cached processes from dumpsys meminfo.
      */
     private void calculateFreeMem() throws DeviceNotAvailableException {
         String memInfo = mTestDevice.executeShellCommand(PROC_MEMINFO);

@@ -67,7 +67,7 @@ public class VellamoBenchmark implements IDeviceTest, IRemoteTest {
         listener.testStarted(testId);
 
         long testStartTime = System.currentTimeMillis();
-        Map<String, String> metrics = new HashMap<String, String>();
+        Map<String, String> metrics = new HashMap<>();
         String errMsg = null;
 
         boolean isTimedOut = false;

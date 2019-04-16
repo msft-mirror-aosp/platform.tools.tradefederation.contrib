@@ -109,7 +109,7 @@ public class EmmcPerformanceTest implements IDeviceTest, IRemoteTest {
     private boolean mSimpleperfMode = false;
 
     @Option(name = "simpleperf-argu", description = "simpleperf arguments")
-    private List<String> mSimpleperfArgu = new ArrayList<String>();
+    private List<String> mSimpleperfArgu = new ArrayList<>();
 
     ITestDevice mTestDevice = null;
     SimplePerfUtil mSpUtil = null;
@@ -122,7 +122,7 @@ public class EmmcPerformanceTest implements IDeviceTest, IRemoteTest {
 
             listener.testRunStarted(RUN_KEY, 5);
             long beginTime = System.currentTimeMillis();
-            Map<String, String> metrics = new HashMap<String, String>();
+            Map<String, String> metrics = new HashMap<>();
 
             runSequentialRead(mIterations, listener, metrics);
             runSequentialWrite(mIterations, listener, metrics);
@@ -212,7 +212,7 @@ public class EmmcPerformanceTest implements IDeviceTest, IRemoteTest {
         TestDescription id = new TestDescription(RUN_KEY, testKey);
         listener.testStarted(id);
 
-        Map<String, SimpleStats> simpleperfMetricsMap = new HashMap<String, SimpleStats>();
+        Map<String, SimpleStats> simpleperfMetricsMap = new HashMap<>();
         SimpleStats stats = new SimpleStats();
         for (int i = 0; i < iterations; i++) {
             if (dropCache) {
