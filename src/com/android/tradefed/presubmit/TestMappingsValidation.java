@@ -31,6 +31,7 @@ import com.google.common.base.Joiner;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -69,6 +70,9 @@ public class TestMappingsValidation implements IBuildReceiver {
     private static final String LOCAL_COMPATIBILITY_SUITES = "compatibility_suites";
     private static final String GENERAL_TESTS = "general-tests";
     private static final String DEVICE_TESTS = "device-tests";
+    // Only Check the tests with group in presubmit or postsubmit.
+    private static final Set<String> TEST_GROUPS_TO_VALIDATE =
+            new HashSet<>(Arrays.asList("presubmit", "postsubmit"));
 
     private File testMappingsDir = null;
     private IDeviceBuildInfo deviceBuildInfo = null;
@@ -115,8 +119,12 @@ public class TestMappingsValidation implements IBuildReceiver {
     public void testTestSuiteSetting() throws JSONException {
         List<String> errors = new ArrayList<>();
         for (String testGroup : allTests.keySet()) {
+            if (!TEST_GROUPS_TO_VALIDATE.contains(testGroup)) {
+                CLog.d("Skip checking tests with group: %s", testGroup);
+                continue;
+            }
             for (TestInfo testInfo : allTests.get(testGroup)) {
-                if (!validateSuiteSetting(testInfo.getName())) {
+                if (!validateSuiteSetting(testInfo.getName(), testInfo.getKeywords())) {
                     errors.add(
                             String.format(
                                     "Missing test_suite setting for test: %s, test group: %s, " +
@@ -242,11 +250,17 @@ public class TestMappingsValidation implements IBuildReceiver {
      * Validate if the name exists in module-info.json and with the correct suite setting.
      *
      * @param name A {@code String} name of the test.
+     * @param keywords A {@code Set<String>} keywords of the test.
      * @return true if name exists in module-info.json and matches either "general-tests" or
-     *     "device-tests".
+     *     "device-tests", or name doesn't exist but has keywords attribute set.
      */
-    private boolean validateSuiteSetting(String name) throws JSONException {
+    private boolean validateSuiteSetting(String name, Set<String> keywords) throws JSONException {
         if (!moduleInfo.has(name)) {
+            if (!keywords.isEmpty()) {
+                CLog.d("Test Module: %s can't be found in module-info.json, but it has " +
+                        "keyword setting. Ignore checking...", name);
+                return true;
+            }
             CLog.w("Test Module: %s can't be found in module-info.json.", name);
             return false;
         }
