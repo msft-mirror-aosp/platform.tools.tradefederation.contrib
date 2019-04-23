@@ -4,10 +4,10 @@
 <configuration description="Downloads build, flashes on device, and runs Widevine Modular DRM tests">
     <option name="test-tag" value="widevineFileUtilsUnit" />
     <target_preparer class="com.android.tradefed.targetprep.TestFilePushSetup">
-        <option name="test-file-name" value="bin/file_utils_unittest" />
+        <option name="test-file-name" value="nativetest/file_utils_unittest" />
     </target_preparer>
     <test class="com.android.tradefed.testtype.GTest">
-        <option name="native-test-device-path" value="/data/bin" />
+        <option name="native-test-device-path" value="/data/nativetest" />
         <option name="module-name" value="file_utils_unittest" />
         <option name="before-test-cmd" value="pm disable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService" />
         <option name="after-test-cmd" value="pm enable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService" />
