@@ -152,7 +152,7 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
     private int mlaunchCount = 10;
 
     @Option(name = "trace-category", description = "comma separated list of trace categories")
-    private String mtraceCategory = "am,view,gfx";
+    private String mtraceCategory = "am,view,gfx,dalvik";
 
     @Option(name = "save-atrace", description = "Upload the atrace file in permanent storage")
     private boolean mSaveAtrace = false;
