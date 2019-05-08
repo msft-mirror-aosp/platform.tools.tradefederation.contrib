@@ -300,7 +300,8 @@ public class HermeticLaunchTest implements IRemoteTest, IDeviceTest {
         String runOptions = "";
 
         // isolated-storage flag only exists in Q and after.
-        if (!mIsolatedStorage && getDevice().checkApiLevelAgainstNextRelease(28)) {
+        if (!mIsolatedStorage && getDevice().checkApiLevelAgainstNextRelease(29)) {
+
             runOptions += "--no-isolated-storage ";
         }
 
