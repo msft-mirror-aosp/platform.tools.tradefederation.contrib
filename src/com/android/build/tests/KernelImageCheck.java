@@ -64,8 +64,7 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
 
     @Option(
         name = "kernel-abi-file",
-        description = "The file path of kernel ABI file",
-        mandatory = true
+        description = "The file path of kernel ABI file"
     )
     private File mKernelAbiFile = null;
 
@@ -77,6 +76,19 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         if (!mKernelImageCheckTool.exists()) {
             throw new IOException("Cannot find kernel image tool at: " + mKernelImageCheckTool);
         }
+
+        // If --kernel-abi-file has not been specified, try to find 'abi.out'
+        // within the downloaded files from the build.
+        if (mKernelAbiFile == null) {
+            mKernelAbiFile = getBuild().getFile("abi.out");
+        }
+
+        // If there was not any 'abi.out' and --kernel-abi-file was not set to
+        // point at an external one, throw that.
+        if (mKernelAbiFile == null) {
+            throw new IOException("Cannot find abi.out within the build results.");
+        }
+
         if (!mKernelAbiFile.exists()) {
             throw new IOException("Cannot find kernel ABI representation at: " + mKernelAbiFile);
         }
