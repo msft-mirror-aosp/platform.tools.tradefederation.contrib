@@ -114,6 +114,11 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         String[] cmd =
                 new String[] {
                     mKernelImageCheckTool.getAbsolutePath() + "/abidw",
+                    // omit various sources of indeterministic abidw output
+                    "--short-locs",
+                    "--no-corpus-path",
+                    "--no-comp-dir-path",
+                    // the path containing vmlinux and *.ko
                     "--linux-tree",
                     mKernelImageFile.getParent(),
                     "--out-file",
