@@ -48,7 +48,7 @@ public class Camera2FrameworkStressTest extends CameraTestBase {
 
     // Keys in instrumentation test metrics
     private static final String RESULT_DIR =
-            "/sdcard/Android/data/com.android.mediaframeworktest/files/camera-out";
+            "/sdcard/Android/data/com.android.mediaframeworktest/files/camera-out/";
     private static final String RESULT_FILE_FORMAT = RESULT_DIR + "fwk-stress_camera_%s.txt";
     private static final Pattern RESULT_FILE_REGEX = Pattern.compile(
             "^fwk-stress_camera_(?<id>.+).txt");
