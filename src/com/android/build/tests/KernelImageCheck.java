@@ -77,16 +77,16 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
             throw new IOException("Cannot find kernel image tool at: " + mKernelImageCheckTool);
         }
 
-        // If --kernel-abi-file has not been specified, try to find 'abi.out'
+        // If --kernel-abi-file has not been specified, try to find 'abi.xml'
         // within the downloaded files from the build.
         if (mKernelAbiFile == null) {
-            mKernelAbiFile = getBuild().getFile("abi.out");
+            mKernelAbiFile = getBuild().getFile("abi.xml");
         }
 
-        // If there was not any 'abi.out' and --kernel-abi-file was not set to
+        // If there was not any 'abi.xml' and --kernel-abi-file was not set to
         // point at an external one, throw that.
         if (mKernelAbiFile == null) {
-            throw new IOException("Cannot find abi.out within the build results.");
+            throw new IOException("Cannot find abi.xml within the build results.");
         }
 
         if (!mKernelAbiFile.exists()) {
@@ -114,10 +114,15 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         String[] cmd =
                 new String[] {
                     mKernelImageCheckTool.getAbsolutePath() + "/abidw",
+                    // omit various sources of indeterministic abidw output
+                    "--short-locs",
+                    "--no-corpus-path",
+                    "--no-comp-dir-path",
+                    // the path containing vmlinux and *.ko
                     "--linux-tree",
                     mKernelImageFile.getParent(),
                     "--out-file",
-                    "abi-new.out"
+                    "abi-new.xml"
                 };
         CommandResult result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
         CLog.i("Result stdout: %s", result.getStdout());
@@ -132,7 +137,7 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         cmd =
                 new String[] {
                     mKernelImageCheckTool.getAbsolutePath() + "/abidiff",
-                    "abi-new.out",
+                    "abi-new.xml",
                     mKernelAbiFile.getAbsolutePath()
                 };
         result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
