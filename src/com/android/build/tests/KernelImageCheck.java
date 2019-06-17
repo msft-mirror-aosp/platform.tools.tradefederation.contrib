@@ -146,6 +146,9 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
             CLog.e("Result stderr: %s", result.getStderr());
             CLog.e("Result exit code: %d", result.getExitCode());
         }
-        assertEquals(CommandStatus.SUCCESS, result.getStatus());
+        assertEquals(
+                "Kernel's ABI has changed. See go/kernel-abi-monitoring for details.\n",
+                CommandStatus.SUCCESS,
+                result.getStatus());
     }
 }
