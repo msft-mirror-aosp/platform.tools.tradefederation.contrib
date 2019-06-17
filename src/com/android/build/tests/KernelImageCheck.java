@@ -137,6 +137,9 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         cmd =
                 new String[] {
                     mKernelImageCheckTool.getAbsolutePath() + "/abidiff",
+                    "--impacted-interfaces",
+                    "--leaf-changes-only",
+                    "--dump-diff-tree",
                     "abi-new.xml",
                     mKernelAbiFile.getAbsolutePath()
                 };
