@@ -252,17 +252,12 @@ public class TestMappingsValidation implements IBuildReceiver {
      * @param name A {@code String} name of the test.
      * @param keywords A {@code Set<String>} keywords of the test.
      * @return true if name exists in module-info.json and matches either "general-tests" or
-     *     "device-tests", or name doesn't exist but has keywords attribute set.
+     *     "device-tests", or name doesn't exist in module-info.json.
      */
     private boolean validateSuiteSetting(String name, Set<String> keywords) throws JSONException {
         if (!moduleInfo.has(name)) {
-            if (!keywords.isEmpty()) {
-                CLog.d("Test Module: %s can't be found in module-info.json, but it has " +
-                        "keyword setting. Ignore checking...", name);
-                return true;
-            }
-            CLog.w("Test Module: %s can't be found in module-info.json.", name);
-            return false;
+            CLog.w("Test Module: %s can't be found in module-info.json. Ignore checking...", name);
+            return true;
         }
         JSONArray compatibilitySuites = moduleInfo.getJSONObject(name).
                 getJSONArray(LOCAL_COMPATIBILITY_SUITES);
