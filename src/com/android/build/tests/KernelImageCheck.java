@@ -26,6 +26,7 @@ import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
+import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.RunUtil;
 
 import org.junit.Before;
@@ -41,6 +42,7 @@ import java.io.IOException;
 public class KernelImageCheck extends BaseHostJUnit4Test {
 
     private static final String KERNEL_IMAGE_NAME = "vmlinux";
+    private static final String KERNEL_IMAGE_REPO = "common";
     private static final int CMD_TIMEOUT = 1000000;
 
     @Option(
@@ -110,12 +112,28 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
     /** Test that kernel ABI is not different from the given ABI representation */
     @Test
     public void test_stable_abi() throws Exception {
+        // Figure out location of Linux source tree by inspecting vmlinux.
+        String[] cmd = new String[] {"strings", mKernelImageFile.getPath(), "-d"};
+        CommandResult result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
+        assertEquals(CommandStatus.SUCCESS, result.getStatus());
+
+        String vmlinuxStrings = result.getStdout();
+        File vmlinuxStringsFile = FileUtil.createTempFile("vmlinuxStrings", ".txt");
+        FileUtil.writeToFile(vmlinuxStrings, vmlinuxStringsFile);
+
+        cmd = new String[] {"grep", "-m", "1", "init/main.c", vmlinuxStringsFile.getAbsolutePath()};
+        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
+        assertEquals(CommandStatus.SUCCESS, result.getStatus());
+
+        String repoRootDir = result.getStdout();
+        // Source file absolute path is /repoRootDir/KERNEL_IMAGE_REPO/location-in-linux-tree.
+        repoRootDir = repoRootDir.split("/" + KERNEL_IMAGE_REPO + "/", 2)[0];
+
         // Generate kernel ABI
-        String[] cmd =
+        cmd =
                 new String[] {
                     mKernelImageCheckTool.getAbsolutePath() + "/abidw",
                     // omit various sources of indeterministic abidw output
-                    "--short-locs",
                     "--no-corpus-path",
                     "--no-comp-dir-path",
                     // the path containing vmlinux and *.ko
@@ -124,13 +142,28 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
                     "--out-file",
                     "abi-new.xml"
                 };
-        CommandResult result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
+        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
         CLog.i("Result stdout: %s", result.getStdout());
         // TODO: differentiate non-zero exit codes.
         if (result.getExitCode() != 0) {
             CLog.e("Result stderr: %s", result.getStderr());
             CLog.e("Result exit code: %d", result.getExitCode());
         }
+        assertEquals(CommandStatus.SUCCESS, result.getStatus());
+
+        // Sanitize abi-new.xml by removing any occurences of the kernel path.
+        cmd =
+                new String[] {
+                    "sed",
+                    "-i",
+                    "s#" + repoRootDir + "/" + KERNEL_IMAGE_REPO + "/##g",
+                    "abi-new.xml"
+                };
+        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
+        assertEquals(CommandStatus.SUCCESS, result.getStatus());
+
+        cmd = new String[] {"sed", "-i", "s#" + repoRootDir + "/##g", "abi-new.xml"};
+        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
         assertEquals(CommandStatus.SUCCESS, result.getStatus());
 
         // Diff kernel ABI with the given ABI file
