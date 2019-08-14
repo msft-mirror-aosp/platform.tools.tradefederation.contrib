@@ -507,7 +507,7 @@ public class CameraPerformanceTest extends CameraTestBase {
         // report json file set in
         // cts/tools/cts-tradefed/res/config/cts-preconditions.xml
         private static final String JSON_RESULT_FILE =
-                "/sdcard/Android/data/android.camera.cts/files/report-log-files/CtsCameraTestCases.reportlog.json";
+                "/sdcard/report-log-files/CtsCameraTestCases.reportlog.json";
         private static final String CAMERA_ID_KEY = "camera_id";
         private static final String REPROCESS_TYPE_KEY = "reprocess_type";
         private static final String CAPTURE_MESSAGE_KEY = "capture_message";
