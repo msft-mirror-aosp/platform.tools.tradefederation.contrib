@@ -221,8 +221,8 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
                         mMetrics.put(dataSplit[0] + ":PSS_TOTAL", dataSplit[2]);
                         mMetrics.put(dataSplit[0] + ":SHARED_DIRTY", dataSplit[4]);
                         mMetrics.put(dataSplit[0] + ":PRIVATE_DIRTY", dataSplit[5]);
-                        mMetrics.put(dataSplit[0] + ":HEAP_TOTAL", dataSplit[9]);
-                        mMetrics.put(dataSplit[0] + ":HEAP_ALLOC", dataSplit[10]);
+                        mMetrics.put(dataSplit[0] + ":HEAP_TOTAL", dataSplit[10]);
+                        mMetrics.put(dataSplit[0] + ":HEAP_ALLOC", dataSplit[11]);
                     } else {
                         mMetrics.put(dataSplit[0] + ":PSS", dataSplit[1]);
                     }
