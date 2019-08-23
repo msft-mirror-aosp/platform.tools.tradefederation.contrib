@@ -27,6 +27,5 @@
         <option name="idle-time" value="0" />
         <!-- 30 minute timeout for the monkey -->
         <option name="monkey-timeout" value="30" />
-        <option name="retry-on-failure" value="true" />
     </test>
 </configuration>
