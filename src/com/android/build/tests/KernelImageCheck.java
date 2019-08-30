@@ -173,8 +173,8 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
                     "--impacted-interfaces",
                     "--leaf-changes-only",
                     "--dump-diff-tree",
-                    "abi-new.xml",
-                    mKernelAbiFile.getAbsolutePath()
+                    mKernelAbiFile.getAbsolutePath(),
+                    "abi-new.xml"
                 };
         result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
         CLog.i("Result stdout: %s", result.getStdout());
