@@ -98,6 +98,7 @@ public class CameraPerformanceTest extends CameraTestBase {
         setTestRunner("androidx.test.runner.AndroidJUnitRunner");
         setRuKey("camera_framework_performance");
         setTestTimeoutMs(10 * 60 * 1000); // 10 mins
+        setIsolatedStorageFlag(false);
     }
 
     /**
