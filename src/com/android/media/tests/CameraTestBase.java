@@ -188,6 +188,7 @@ public class CameraTestBase implements IDeviceTest, IRemoteTest, IConfigurationR
 
         InstrumentationTest instr = new InstrumentationTest();
         instr.setDevice(getDevice());
+        instr.setConfiguration(mConfiguration);
         instr.setPackageName(getTestPackage());
         instr.setRunnerName(getTestRunner());
         instr.setClassName(getTestClass());
@@ -195,6 +196,9 @@ public class CameraTestBase implements IDeviceTest, IRemoteTest, IConfigurationR
         instr.setShellTimeout(getShellTimeoutMs());
         instr.setRunName(getRuKey());
         instr.setRerunMode(false);
+        if (!getIsolatedStorageFlag()) {
+            instr.setIsolatedStorage(false);
+        }
 
         // Set test iteration.
         if (getIterationCount() > 1) {
@@ -842,6 +846,16 @@ public class CameraTestBase implements IDeviceTest, IRemoteTest, IConfigurationR
     public int getIterationCount() {
         return mIterations;
     }
+
+    public boolean getIsolatedStorageFlag() {
+        return mIsolatedStorageFlag;
+    }
+
+    public void setIsolatedStorageFlag(boolean isolatedStorage) {
+        mIsolatedStorageFlag = isolatedStorage;
+    }
+    boolean mIsolatedStorageFlag = true;
+
 
     public Map<String, String> getInstrumentationArgMap() { return mInstrArgMap; }
 }
