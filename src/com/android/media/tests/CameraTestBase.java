@@ -188,6 +188,7 @@ public class CameraTestBase implements IDeviceTest, IRemoteTest, IConfigurationR
 
         InstrumentationTest instr = new InstrumentationTest();
         instr.setDevice(getDevice());
+        instr.setConfiguration(mConfiguration);
         instr.setPackageName(getTestPackage());
         instr.setRunnerName(getTestRunner());
         instr.setClassName(getTestClass());
