@@ -75,7 +75,7 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
 
     @Before
     public void setUp() throws Exception {
-        if (!mKernelImageCheckTool.exists()) {
+        if (mKernelImageCheckTool == null || !mKernelImageCheckTool.exists()) {
             throw new IOException("Cannot find kernel image tool at: " + mKernelImageCheckTool);
         }
 
