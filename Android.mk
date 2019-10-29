@@ -1,4 +1,4 @@
-# Copyright (C) 2012 The Android Open Source Project
+# Copyright (C) 2017 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,31 +13,18 @@
 # limitations under the License.
 
 LOCAL_PATH := $(call my-dir)
-
-include $(CLEAR_VARS)
-
-# Only compile source java files in this lib.
-LOCAL_SRC_FILES := $(call all-java-files-under, ../src)
-
-#LOCAL_JAVA_RESOURCE_DIRS := ../res
-
-LOCAL_JAVACFLAGS += -g -Xlint
-
-LOCAL_MODULE := tf-contrib-tests
-LOCAL_MODULE_TAGS := optional
-LOCAL_JAVA_LIBRARIES := tradefed tradefed-contrib easymock mockito objenesis
-
-include $(BUILD_HOST_JAVA_LIBRARY)
+COMPATIBILITY.tradefed_tests_dir := \
+  $(COMPATIBILITY.tradefed_tests_dir) $(LOCAL_PATH)/res/config
 
 # makefile rules to copy jars to HOST_OUT/tradefed
 # so tradefed.sh can automatically add to classpath
-
-DEST_JAR := $(HOST_OUT)/tradefed/$(LOCAL_MODULE).jar
-$(DEST_JAR): $(LOCAL_BUILT_MODULE)
+DEST_JAR := $(HOST_OUT)/tradefed/tradefed-contrib.jar
+BUILT_JAR := $(call intermediates-dir-for,JAVA_LIBRARIES,tradefed-contrib,HOST)/javalib.jar
+$(DEST_JAR): $(BUILT_JAR)
 	$(copy-file-to-new-target)
 
-# this dependency ensure the above rule will be executed if module is built
-$(LOCAL_INSTALLED_MODULE) : $(DEST_JAR)
+# this dependency ensure the above rule will be executed if jar is built
+$(HOST_OUT_JAVA_LIBRARIES)/tradefed-contrib.jar : $(DEST_JAR)
 
 # Build all sub-directories
 include $(call all-makefiles-under,$(LOCAL_PATH))
