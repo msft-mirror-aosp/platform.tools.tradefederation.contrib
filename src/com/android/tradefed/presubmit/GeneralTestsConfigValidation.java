@@ -22,6 +22,8 @@ import com.android.tradefed.config.ConfigurationFactory;
 import com.android.tradefed.config.ConfigurationUtil;
 import com.android.tradefed.config.IConfiguration;
 import com.android.tradefed.config.IConfigurationFactory;
+import com.android.tradefed.targetprep.ITargetPreparer;
+import com.android.tradefed.targetprep.TestAppInstallSetup;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.testtype.IBuildReceiver;
 import com.android.tradefed.testtype.suite.ValidateSuiteConfigHelper;
@@ -72,6 +74,8 @@ public class GeneralTestsConfigValidation implements IBuildReceiver {
                 // All configurations in general-tests.zip should be module since they are generated
                 // from AndroidTest.xml
                 ValidateSuiteConfigHelper.validateConfig(c);
+
+                ensureApkUninstalled(configName, c.getTargetPreparers());
                 // Add more checks if necessary
             } catch (ConfigurationException e) {
                 errors.add(String.format("\t%s: %s", configName, e.getMessage()));
@@ -82,6 +86,19 @@ public class GeneralTestsConfigValidation implements IBuildReceiver {
         if (!errors.isEmpty()) {
             throw new ConfigurationException(
                     String.format("Fail configuration check:\n%s", Joiner.on("\n").join(errors)));
+        }
+    }
+
+    private void ensureApkUninstalled(String config, List<ITargetPreparer> preparers)
+            throws Exception {
+        for (ITargetPreparer preparer : preparers) {
+            if (preparer instanceof TestAppInstallSetup) {
+                TestAppInstallSetup installer = (TestAppInstallSetup) preparer;
+                if (!installer.isCleanUpEnabled()) {
+                    throw new ConfigurationException(
+                            String.format("Config: %s should set cleanup-apks=true.", config));
+                }
+            }
         }
     }
 }
