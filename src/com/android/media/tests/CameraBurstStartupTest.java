@@ -52,7 +52,7 @@ public class CameraBurstStartupTest extends CameraTestBase {
     }
 
     /** A listener to collect the output from test run and fatal errors */
-    private class CollectingListener extends DefaultCollectingListener {
+    private class CollectingListener extends CameraTestMetricsCollectionListener.DefaultCollectingListener {
 
         public CollectingListener(ITestInvocationListener listener) {
             super(listener);
