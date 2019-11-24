@@ -54,7 +54,7 @@ public class Camera2LatencyTest extends CameraTestBase {
     /**
      * A listener to collect the results from each test run, then forward them to other listeners.
      */
-    private class CollectingListener extends DefaultCollectingListener {
+    private class CollectingListener extends CameraTestMetricsCollectionListener.DefaultCollectingListener {
 
         public CollectingListener(ITestInvocationListener listener) {
             super(listener);
