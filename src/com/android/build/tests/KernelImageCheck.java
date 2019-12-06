@@ -35,6 +35,7 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 /** A device-less test that test kernel image */
 @OptionClass(alias = "kernel-image-check")
@@ -72,6 +73,7 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
 
     private IBuildInfo mBuildInfo;
     private File mKernelImageFile = null;
+    private File mKernelAbiWhitelist = null;
 
     @Before
     public void setUp() throws Exception {
@@ -107,6 +109,16 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         if (mKernelImageFile == null || !mKernelImageFile.exists()) {
             throw new RuntimeException("Cannot find kernel image file: " + mKernelImageName);
         }
+
+        // This is an optional parameter. No need to check for an error here.
+        mKernelAbiWhitelist = getBuild().getFile("abi_whitelist");
+        if (mKernelAbiWhitelist == null || !mKernelAbiWhitelist.exists()) {
+            // Then check within alternative path.
+            File imageDir = new File(mKernelImageAltPath);
+            if (imageDir.isDirectory()) {
+                mKernelAbiWhitelist = new File(imageDir, "abi_whitelist");
+            }
+        }
     }
 
     /** Test that kernel ABI is not different from the given ABI representation */
@@ -130,19 +142,21 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         repoRootDir = repoRootDir.split("/" + KERNEL_IMAGE_REPO + "/", 2)[0];
 
         // Generate kernel ABI
-        cmd =
-                new String[] {
-                    mKernelImageCheckTool.getAbsolutePath() + "/abidw",
-                    // omit various sources of indeterministic abidw output
-                    "--no-corpus-path",
-                    "--no-comp-dir-path",
-                    // the path containing vmlinux and *.ko
-                    "--linux-tree",
-                    mKernelImageFile.getParent(),
-                    "--out-file",
-                    "abi-new.xml"
-                };
-        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
+        ArrayList<String> abidwCmd = new ArrayList<String>();
+        abidwCmd.add(mKernelImageCheckTool.getAbsolutePath() + "/abidw");
+        // omit various sources of indeterministic abidw output
+        abidwCmd.add("--no-corpus-path");
+        abidwCmd.add("--no-comp-dir-path");
+        // the path containing vmlinux and *.ko
+        abidwCmd.add("--linux-tree");
+        abidwCmd.add(mKernelImageFile.getParent());
+        abidwCmd.add("--out-file");
+        abidwCmd.add("abi-new.xml");
+        if (mKernelAbiWhitelist != null && mKernelAbiWhitelist.exists()) {
+            abidwCmd.add("--kmi-whitelist");
+            abidwCmd.add(mKernelAbiWhitelist.getAbsolutePath());
+        }
+        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, abidwCmd.toArray(new String[0]));
         CLog.i("Result stdout: %s", result.getStdout());
         // TODO: differentiate non-zero exit codes.
         if (result.getExitCode() != 0) {
@@ -167,16 +181,18 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         assertEquals(CommandStatus.SUCCESS, result.getStatus());
 
         // Diff kernel ABI with the given ABI file
-        cmd =
-                new String[] {
-                    mKernelImageCheckTool.getAbsolutePath() + "/abidiff",
-                    "--impacted-interfaces",
-                    "--leaf-changes-only",
-                    "--dump-diff-tree",
-                    mKernelAbiFile.getAbsolutePath(),
-                    "abi-new.xml"
-                };
-        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
+        ArrayList<String> abidiffCmd = new ArrayList<String>();
+        abidiffCmd.add(mKernelImageCheckTool.getAbsolutePath() + "/abidiff");
+        abidiffCmd.add("--impacted-interfaces");
+        abidiffCmd.add("--leaf-changes-only");
+        abidiffCmd.add("--dump-diff-tree");
+        abidiffCmd.add(mKernelAbiFile.getAbsolutePath());
+        abidiffCmd.add("abi-new.xml");
+        if (mKernelAbiWhitelist != null && mKernelAbiWhitelist.exists()) {
+            abidiffCmd.add("--kmi-whitelist");
+            abidiffCmd.add(mKernelAbiWhitelist.getAbsolutePath());
+        }
+        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, abidiffCmd.toArray(new String[0]));
         CLog.i("Result stdout: %s", result.getStdout());
         if (result.getExitCode() != 0) {
             CLog.e("Result stderr: %s", result.getStderr());
