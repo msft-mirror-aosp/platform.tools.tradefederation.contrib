@@ -170,9 +170,9 @@ public class TestMappingsValidation implements IBuildReceiver {
     private List<String> validateFilterOption(
             String moduleName, String filterOption, String testGroup) {
         List<String> errors = new ArrayList<>();
-        Set<Filters> filterTypes = new HashSet<>();
-        Map<Filters, Set<TestInfo>> filterTestInfos = new HashMap<>();
         for (TestInfo test : getTestInfos(moduleName, testGroup)) {
+            Set<Filters> filterTypes = new HashSet<>();
+            Map<Filters, Set<TestInfo>> filterTestInfos = new HashMap<>();
             for (TestOption options : test.getOptions()) {
                 if (options.getName().equals(filterOption)) {
                     Filters optionType = getOptionType(options.getValue());
@@ -180,20 +180,20 @@ public class TestMappingsValidation implements IBuildReceiver {
                     filterTestInfos.computeIfAbsent(optionType, k -> new HashSet<>()).add(test);
                 }
             }
-        }
-
-        filterTypes = filterTestInfos.keySet();
-        // If the options of a test contain either REGEX, CLASS_OR_METHOD, or PACKAGE, it should be
-        // caught and output the tests information.
-        // TODO(b/128947872): List the type with fewest options first.
-        if (filterTypes.size() > 1) {
-            errors.add(
-                    String.format(
-                            "Mixed filter types found. Test: %s , TestGroup: %s, Details:\n" +
-                            "%s",
-                            moduleName,
-                            testGroup,
-                            getDetailedErrors(filterOption, filterTestInfos)));
+            filterTypes = filterTestInfos.keySet();
+            // If the options of a test in one TEST_MAPPING file contain either REGEX,
+            // CLASS_OR_METHOD, or PACKAGE, it should be caught and output the tests
+            // information.
+            // TODO(b/128947872): List the type with fewest options first.
+            if (filterTypes.size() > 1) {
+                errors.add(
+                        String.format(
+                                "Mixed filter types found. Test: %s , TestGroup: %s, Details:\n" +
+                                "%s",
+                                moduleName,
+                                testGroup,
+                                getDetailedErrors(filterOption, filterTestInfos)));
+            }
         }
         return errors;
     }
