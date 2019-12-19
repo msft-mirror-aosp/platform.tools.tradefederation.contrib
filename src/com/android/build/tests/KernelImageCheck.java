@@ -98,7 +98,8 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         }
         // First try to get kernel image from BuildInfo
         mKernelImageFile = getBuild().getFile(mKernelImageName);
-        if (mKernelImageFile == null || !mKernelImageFile.exists()) {
+        if ((mKernelImageFile == null || !mKernelImageFile.exists())
+                && mKernelImageAltPath != null) {
             // Then check within alternative path.
             File imageDir = new File(mKernelImageAltPath);
             if (imageDir.isDirectory()) {
@@ -112,7 +113,8 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
 
         // This is an optional parameter. No need to check for an error here.
         mKernelAbiWhitelist = getBuild().getFile("abi_whitelist");
-        if (mKernelAbiWhitelist == null || !mKernelAbiWhitelist.exists()) {
+        if ((mKernelAbiWhitelist == null || !mKernelAbiWhitelist.exists())
+                && mKernelImageAltPath != null) {
             // Then check within alternative path.
             File imageDir = new File(mKernelImageAltPath);
             if (imageDir.isDirectory()) {
