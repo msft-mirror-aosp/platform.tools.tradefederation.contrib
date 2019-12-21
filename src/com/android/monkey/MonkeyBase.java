@@ -40,6 +40,7 @@ import com.android.tradefed.result.LogDataType;
 import com.android.tradefed.result.TestDescription;
 import com.android.tradefed.testtype.IDeviceTest;
 import com.android.tradefed.testtype.IRemoteTest;
+import com.android.tradefed.testtype.IRetriableTest;
 import com.android.tradefed.util.ArrayUtil;
 import com.android.tradefed.util.Bugreport;
 import com.android.tradefed.util.CircularAtraceUtil;
@@ -68,7 +69,7 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /** Runner for stress tests which use the monkey command. */
-public class MonkeyBase implements IDeviceTest, IRemoteTest {
+public class MonkeyBase implements IDeviceTest, IRemoteTest, IRetriableTest {
 
     public static final String MONKEY_LOG_NAME = "monkey_log";
     public static final String BUGREPORT_NAME = "bugreport";
@@ -230,8 +231,6 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
                             + "flags and parameters as launched from Launcher. May be repeated")
     private List<String> mLaunchComponents = new ArrayList<>();
 
-    /** @deprecated b/139751666 */
-    @Deprecated
     @Option(name = "retry-on-failure", description = "Retry the test on failure")
     private boolean mRetryOnFailure = false;
 
@@ -702,6 +701,18 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
     @Override
     public ITestDevice getDevice() {
         return mTestDevice;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@code false} if retry-on-failure is not set, if the monkey ran to completion,
+     *     crashed in an understood way, or if there were no packages to run, {@code true}
+     *     otherwise.
+     */
+    @Override
+    public boolean isRetriable() {
+        return mRetryOnFailure;
     }
 
     /** Check the results and return if valid or throw an assertion error if not valid. */
