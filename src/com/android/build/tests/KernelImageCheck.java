@@ -36,6 +36,7 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.stream.Stream;
 
 /** A device-less test that test kernel image */
 @OptionClass(alias = "kernel-image-check")
@@ -142,6 +143,19 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         String repoRootDir = result.getStdout();
         // Source file absolute path is /repoRootDir/KERNEL_IMAGE_REPO/location-in-linux-tree.
         repoRootDir = repoRootDir.split("/" + KERNEL_IMAGE_REPO + "/", 2)[0];
+
+        // Try to set the executable bit for abidw and abidiff
+        Stream.of("abidw", "abidiff")
+                .forEach(
+                        bin -> {
+                            String[] chmod =
+                                    new String[] {
+                                        "chmod",
+                                        "u+x",
+                                        mKernelImageCheckTool.getAbsolutePath() + "/" + bin
+                                    };
+                            RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, chmod);
+                        });
 
         // Generate kernel ABI
         ArrayList<String> abidwCmd = new ArrayList<String>();
