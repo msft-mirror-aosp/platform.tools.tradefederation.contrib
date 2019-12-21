@@ -26,7 +26,6 @@ import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
-import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.RunUtil;
 
 import org.junit.Before;
@@ -42,7 +41,6 @@ import java.io.IOException;
 public class KernelImageCheck extends BaseHostJUnit4Test {
 
     private static final String KERNEL_IMAGE_NAME = "vmlinux";
-    private static final String KERNEL_IMAGE_REPO = "common";
     private static final int CMD_TIMEOUT = 1000000;
 
     @Option(
@@ -66,7 +64,8 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
 
     @Option(
         name = "kernel-abi-file",
-        description = "The file path of kernel ABI file"
+        description = "The file path of kernel ABI file",
+        mandatory = true
     )
     private File mKernelAbiFile = null;
 
@@ -75,22 +74,9 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
 
     @Before
     public void setUp() throws Exception {
-        if (mKernelImageCheckTool == null || !mKernelImageCheckTool.exists()) {
+        if (!mKernelImageCheckTool.exists()) {
             throw new IOException("Cannot find kernel image tool at: " + mKernelImageCheckTool);
         }
-
-        // If --kernel-abi-file has not been specified, try to find 'abi.xml'
-        // within the downloaded files from the build.
-        if (mKernelAbiFile == null) {
-            mKernelAbiFile = getBuild().getFile("abi.xml");
-        }
-
-        // If there was not any 'abi.xml' and --kernel-abi-file was not set to
-        // point at an external one, throw that.
-        if (mKernelAbiFile == null) {
-            throw new IOException("Cannot find abi.xml within the build results.");
-        }
-
         if (!mKernelAbiFile.exists()) {
             throw new IOException("Cannot find kernel ABI representation at: " + mKernelAbiFile);
         }
@@ -112,37 +98,16 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
     /** Test that kernel ABI is not different from the given ABI representation */
     @Test
     public void test_stable_abi() throws Exception {
-        // Figure out location of Linux source tree by inspecting vmlinux.
-        String[] cmd = new String[] {"strings", mKernelImageFile.getPath(), "-d"};
-        CommandResult result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
-        assertEquals(CommandStatus.SUCCESS, result.getStatus());
-
-        String vmlinuxStrings = result.getStdout();
-        File vmlinuxStringsFile = FileUtil.createTempFile("vmlinuxStrings", ".txt");
-        FileUtil.writeToFile(vmlinuxStrings, vmlinuxStringsFile);
-
-        cmd = new String[] {"grep", "-m", "1", "init/main.c", vmlinuxStringsFile.getAbsolutePath()};
-        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
-        assertEquals(CommandStatus.SUCCESS, result.getStatus());
-
-        String repoRootDir = result.getStdout();
-        // Source file absolute path is /repoRootDir/KERNEL_IMAGE_REPO/location-in-linux-tree.
-        repoRootDir = repoRootDir.split("/" + KERNEL_IMAGE_REPO + "/", 2)[0];
-
         // Generate kernel ABI
-        cmd =
+        String[] cmd =
                 new String[] {
                     mKernelImageCheckTool.getAbsolutePath() + "/abidw",
-                    // omit various sources of indeterministic abidw output
-                    "--no-corpus-path",
-                    "--no-comp-dir-path",
-                    // the path containing vmlinux and *.ko
                     "--linux-tree",
                     mKernelImageFile.getParent(),
                     "--out-file",
-                    "abi-new.xml"
+                    "abi-new.out"
                 };
-        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
+        CommandResult result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
         CLog.i("Result stdout: %s", result.getStdout());
         // TODO: differentiate non-zero exit codes.
         if (result.getExitCode() != 0) {
@@ -151,30 +116,12 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
         }
         assertEquals(CommandStatus.SUCCESS, result.getStatus());
 
-        // Sanitize abi-new.xml by removing any occurences of the kernel path.
-        cmd =
-                new String[] {
-                    "sed",
-                    "-i",
-                    "s#" + repoRootDir + "/" + KERNEL_IMAGE_REPO + "/##g",
-                    "abi-new.xml"
-                };
-        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
-        assertEquals(CommandStatus.SUCCESS, result.getStatus());
-
-        cmd = new String[] {"sed", "-i", "s#" + repoRootDir + "/##g", "abi-new.xml"};
-        result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
-        assertEquals(CommandStatus.SUCCESS, result.getStatus());
-
         // Diff kernel ABI with the given ABI file
         cmd =
                 new String[] {
                     mKernelImageCheckTool.getAbsolutePath() + "/abidiff",
-                    "--impacted-interfaces",
-                    "--leaf-changes-only",
-                    "--dump-diff-tree",
-                    mKernelAbiFile.getAbsolutePath(),
-                    "abi-new.xml"
+                    "abi-new.out",
+                    mKernelAbiFile.getAbsolutePath()
                 };
         result = RunUtil.getDefault().runTimedCmd(CMD_TIMEOUT, cmd);
         CLog.i("Result stdout: %s", result.getStdout());
@@ -182,9 +129,6 @@ public class KernelImageCheck extends BaseHostJUnit4Test {
             CLog.e("Result stderr: %s", result.getStderr());
             CLog.e("Result exit code: %d", result.getExitCode());
         }
-        assertEquals(
-                "Kernel's ABI has changed. See go/kernel-abi-monitoring for details.\n",
-                CommandStatus.SUCCESS,
-                result.getStatus());
+        assertEquals(CommandStatus.SUCCESS, result.getStatus());
     }
 }

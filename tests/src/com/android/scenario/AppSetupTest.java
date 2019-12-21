@@ -86,12 +86,4 @@ public class AppSetupTest {
         verify(mTestDevice, times(1))
                 .executeShellCommand(eq(String.format(AppSetup.KILL_APP_COMMAND_TEMPLATE, "app2")));
     }
-
-    /** Test setting disable option exits from the run method early.*/
-    @Test
-    public void testDisableOption() throws Exception {
-        mOptionSetter.setOptionValue("disable", String.valueOf(true));
-        mAppSetup.run(mListener);
-        verify(mAppSetup, times(0)).runTest(any());
-    }
 }
