@@ -255,7 +255,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
                 mMetrics.put("System_" + dataSplit[0], dataSplit[1]);
             }
         }
-        mMetrics.put("System_Kernal_Firmware", String.valueOf((mTotalMemory - memTotal)));
+        mMetrics.put("System_Kernel_Firmware", String.valueOf((mTotalMemory - memTotal)));
         mMetrics.put("System_Framework_Apps", String.valueOf((memTotal - (memFree + cached))));
     }
 
@@ -275,7 +275,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
         int cacheProcDirty = Integer.parseInt(memAvailable[1]);
 
         String cachedProcesses = mTestDevice.executeShellCommand(CACHED_PROCESSES);
-        String processes[] = cachedProcesses.split(LINE_SEPARATOR);
+        String processes[] = cachedProcesses.split("\\n{2}")[0].split(LINE_SEPARATOR);
         StringBuilder processesDumpsysInfo = new StringBuilder();
         for (String process : processes) {
             Matcher match = null;
