@@ -22,6 +22,7 @@ import com.android.tradefed.config.IConfigurationReceiver;
 import com.android.tradefed.config.Option;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
+import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.result.ByteArrayInputStreamSource;
 import com.android.tradefed.result.CollectingTestListener;
@@ -148,7 +149,8 @@ public class CameraTestBase implements IDeviceTest, IRemoteTest, IConfigurationR
 
     /** {@inheritDoc} */
     @Override
-    public void run(ITestInvocationListener listener) throws DeviceNotAvailableException {
+    public void run(TestInformation testInfo, ITestInvocationListener listener)
+            throws DeviceNotAvailableException {
         // ignore
     }
 
@@ -162,7 +164,9 @@ public class CameraTestBase implements IDeviceTest, IRemoteTest, IConfigurationR
      * @throws DeviceNotAvailableException
      */
     protected void runInstrumentationTest(
-            ITestInvocationListener listener, CameraTestMetricsCollectionListener.DefaultCollectingListener collectingListener)
+            TestInformation testInfo,
+            ITestInvocationListener listener,
+            CameraTestMetricsCollectionListener.DefaultCollectingListener collectingListener)
             throws DeviceNotAvailableException {
         Assert.assertNotNull(collectingListener);
         mCollectingListener = collectingListener;
@@ -207,10 +211,10 @@ public class CameraTestBase implements IDeviceTest, IRemoteTest, IConfigurationR
             CLog.d(String.format("The number of test methods is: %d", mTestMethods.size()));
             for (String testName : mTestMethods) {
                 instr.setMethodName(testName);
-                instr.run(mCollectingListener);
+                instr.run(testInfo, mCollectingListener);
             }
         } else {
-            instr.run(mCollectingListener);
+            instr.run(testInfo, mCollectingListener);
         }
 
         dumpIonHeaps(mCollectingListener, getTestClass());
