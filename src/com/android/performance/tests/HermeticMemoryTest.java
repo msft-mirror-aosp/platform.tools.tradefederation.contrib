@@ -279,7 +279,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
         StringBuilder processesDumpsysInfo = new StringBuilder();
         for (String process : processes) {
             Matcher match = null;
-            if (((match = matches(PID_PATTERN, process))) != null) {
+            if ((match = matches(PID_PATTERN, process)) != null) {
                 String processId = match.group("processid");
                 processesDumpsysInfo.append(
                         String.format("Process Name : %s - PID : %s", process, processId));
