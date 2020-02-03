@@ -114,11 +114,9 @@ public class TestMappingsValidation implements IBuildReceiver {
         FileUtil.recursiveDelete(testMappingsDir);
     }
 
-    /**
-     * Test the size of general-tests.zip to ensure it doesn't exceed the size limitation.
-     */
+    /** Test the size of general-tests.zip to ensure it doesn't exceed the size limitation. */
     @Test
-    public void testGeneralTestsSize() throws JSONException {
+    public void testGeneralTestsSize() {
         File generalTestsZip = deviceBuildInfo.getFile(GENERAL_TESTS_ZIP);
         String error = null;
         if (generalTestsZip == null || !generalTestsZip.exists()) {
