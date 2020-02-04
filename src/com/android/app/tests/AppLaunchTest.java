@@ -18,6 +18,8 @@ package com.android.app.tests;
 import com.android.tradefed.build.IAppBuildInfo;
 import com.android.tradefed.build.IBuildInfo;
 import com.android.tradefed.build.VersionedFile;
+import com.android.tradefed.config.IConfiguration;
+import com.android.tradefed.config.IConfigurationReceiver;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
@@ -43,11 +45,13 @@ import java.util.HashMap;
  * <p>Requires a {@link IAppBuildInfo} and 'aapt' being present in path. Assume the AppLaunch test
  * app is already present on device.
  */
-public class AppLaunchTest implements IDeviceTest, IRemoteTest, IBuildReceiver {
+public class AppLaunchTest
+        implements IDeviceTest, IRemoteTest, IBuildReceiver, IConfigurationReceiver {
 
     private static final String RUN_NAME = "AppLaunch";
     private ITestDevice mDevice;
     private IBuildInfo mBuild;
+    private IConfiguration mConfiguration;
 
     /** {@inheritDoc} */
     @Override
@@ -65,6 +69,12 @@ public class AppLaunchTest implements IDeviceTest, IRemoteTest, IBuildReceiver {
     @Override
     public void setBuild(IBuildInfo buildInfo) {
         mBuild = buildInfo;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void setConfiguration(IConfiguration config) {
+        mConfiguration = config;
     }
 
     /**
@@ -129,6 +139,7 @@ public class AppLaunchTest implements IDeviceTest, IRemoteTest, IBuildReceiver {
         i.setPackageName("com.android.applaunchtest");
         i.setRunnerName("com.android.applaunchtest.AppLaunchRunner");
         i.setDevice(getDevice());
+        i.setConfiguration(mConfiguration);
         i.addInstrumentationArg("packageName", packageName);
         i.run(listener);
         try (InputStreamSource s = getDevice().getScreenshot()) {
