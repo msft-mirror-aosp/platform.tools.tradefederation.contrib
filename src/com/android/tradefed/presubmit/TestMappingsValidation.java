@@ -65,6 +65,7 @@ public class TestMappingsValidation implements IBuildReceiver {
     private static final Pattern REGULAR_EXPRESSION = Pattern.compile("(\\?+)|(\\*+)");
     private static final String MODULE_INFO = "module-info.json";
     private static final String TEST_MAPPINGS_ZIP = "test_mappings.zip";
+    private static final String GENERAL_TESTS_ZIP = "general-tests.zip";
     private static final String INCLUDE_FILTER = "include-filter";
     private static final String EXCLUDE_FILTER = "exclude-filter";
     private static final String LOCAL_COMPATIBILITY_SUITES = "compatibility_suites";
@@ -73,6 +74,8 @@ public class TestMappingsValidation implements IBuildReceiver {
     // Only Check the tests with group in presubmit or postsubmit.
     private static final Set<String> TEST_GROUPS_TO_VALIDATE =
             new HashSet<>(Arrays.asList("presubmit", "postsubmit"));
+    private static final long GIGABYTE = 1024L * 1024L * 1024L;
+    private static final long SIZE_LIMITATION = 4L;
 
     private File testMappingsDir = null;
     private IDeviceBuildInfo deviceBuildInfo = null;
@@ -109,6 +112,24 @@ public class TestMappingsValidation implements IBuildReceiver {
     @After
     public void tearDown() {
         FileUtil.recursiveDelete(testMappingsDir);
+    }
+
+    /** Test the size of general-tests.zip to ensure it doesn't exceed the size limitation. */
+    @Test
+    public void testGeneralTestsSize() {
+        File generalTestsZip = deviceBuildInfo.getFile(GENERAL_TESTS_ZIP);
+        String error = null;
+        if (generalTestsZip == null || !generalTestsZip.exists()) {
+            error = String.format("general-tests.zip is null or doesn't exist");
+        } else {
+            if (generalTestsZip.length()/GIGABYTE >= SIZE_LIMITATION) {
+                error = String.format("The size of general-tests.zip is: %s Bytes, which " +
+                    "exceeds the limitation of %s GB", generalTestsZip.length(), SIZE_LIMITATION);
+            }
+        }
+        if (error != null) {
+            fail(String.format("Fail size check for general-tests.zip:\n%s", error));
+        }
     }
 
     /**
@@ -170,9 +191,9 @@ public class TestMappingsValidation implements IBuildReceiver {
     private List<String> validateFilterOption(
             String moduleName, String filterOption, String testGroup) {
         List<String> errors = new ArrayList<>();
-        Set<Filters> filterTypes = new HashSet<>();
-        Map<Filters, Set<TestInfo>> filterTestInfos = new HashMap<>();
         for (TestInfo test : getTestInfos(moduleName, testGroup)) {
+            Set<Filters> filterTypes = new HashSet<>();
+            Map<Filters, Set<TestInfo>> filterTestInfos = new HashMap<>();
             for (TestOption options : test.getOptions()) {
                 if (options.getName().equals(filterOption)) {
                     Filters optionType = getOptionType(options.getValue());
@@ -180,20 +201,20 @@ public class TestMappingsValidation implements IBuildReceiver {
                     filterTestInfos.computeIfAbsent(optionType, k -> new HashSet<>()).add(test);
                 }
             }
-        }
-
-        filterTypes = filterTestInfos.keySet();
-        // If the options of a test contain either REGEX, CLASS_OR_METHOD, or PACKAGE, it should be
-        // caught and output the tests information.
-        // TODO(b/128947872): List the type with fewest options first.
-        if (filterTypes.size() > 1) {
-            errors.add(
-                    String.format(
-                            "Mixed filter types found. Test: %s , TestGroup: %s, Details:\n" +
-                            "%s",
-                            moduleName,
-                            testGroup,
-                            getDetailedErrors(filterOption, filterTestInfos)));
+            filterTypes = filterTestInfos.keySet();
+            // If the options of a test in one TEST_MAPPING file contain either REGEX,
+            // CLASS_OR_METHOD, or PACKAGE, it should be caught and output the tests
+            // information.
+            // TODO(b/128947872): List the type with fewest options first.
+            if (filterTypes.size() > 1) {
+                errors.add(
+                        String.format(
+                                "Mixed filter types found. Test: %s , TestGroup: %s, Details:\n" +
+                                "%s",
+                                moduleName,
+                                testGroup,
+                                getDetailedErrors(filterOption, filterTestInfos)));
+            }
         }
         return errors;
     }
