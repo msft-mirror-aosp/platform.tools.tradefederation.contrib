@@ -67,6 +67,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
     private static final String LINE_SEPARATOR = "\\n";
     private static final String MEM_AVAIL_PATTERN = "^MemAvailable.*";
     private static final String MEM_TOTAL = "^\\s+TOTAL\\s+.*";
+    private static final String FLOAT_DATA = "^([+-]?(\\d+\\.)?\\d+)$";
 
     @Option(
             name = "post-app-launch-delay",
@@ -223,7 +224,7 @@ public class HermeticMemoryTest implements IDeviceTest, IRemoteTest {
                         mMetrics.put(dataSplit[0] + ":PRIVATE_DIRTY", dataSplit[5]);
                         mMetrics.put(dataSplit[0] + ":HEAP_TOTAL", dataSplit[10]);
                         mMetrics.put(dataSplit[0] + ":HEAP_ALLOC", dataSplit[11]);
-                    } else {
+                    } else if (dataSplit[1].matches(FLOAT_DATA)) {
                         mMetrics.put(dataSplit[0] + ":PSS", dataSplit[1]);
                     }
                 }
