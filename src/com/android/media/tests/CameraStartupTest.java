@@ -101,7 +101,7 @@ public class CameraStartupTest extends CameraTestBase {
                 return;
             }
             if (i + 1 < numTestRuns) {  // Skipping preparation on the last run
-                postSetupTestRun();
+                postSetupTestRun(testInfo);
             }
         }
 
@@ -122,7 +122,7 @@ public class CameraStartupTest extends CameraTestBase {
                 TfMetricProtoUtil.upgradeConvert(getAverageMultipleRunMetrics()));
     }
 
-    private void postSetupTestRun() throws DeviceNotAvailableException {
+    private void postSetupTestRun(TestInformation testInfo) throws DeviceNotAvailableException {
         // Reboot for a cold start up of Camera application
         CLog.d("Cold start: Rebooting...");
         getDevice().reboot();
@@ -136,7 +136,7 @@ public class CameraStartupTest extends CameraTestBase {
             if (preparer instanceof TemperatureThrottlingWaiter) {
                 usedTemperatureThrottlingWaiter = true;
                 try {
-                    preparer.setUp(getDevice(), null);
+                    preparer.setUp(testInfo);
                 } catch (TargetSetupError e) {
                     CLog.w("No-op even when temperature is still high after wait timeout. "
                         + "error: %s", e.getMessage());
@@ -220,7 +220,6 @@ public class CameraStartupTest extends CameraTestBase {
             // CameraFirstPreviewFrameTimeMs=0|0.0|0 0 ... 0
             //
             // Then report only the first two startup time of cold startup and average warm startup.
-            CLog.i("CCCC: test metrics: %s", testMetrics);
             Map<String, String> parsed = new HashMap<String, String>();
             for (Map.Entry<String, String> metric : testMetrics.entrySet()) {
                 Matcher matcher = STATS_REGEX.matcher(metric.getValue());
