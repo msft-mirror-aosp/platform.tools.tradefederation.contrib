@@ -26,6 +26,7 @@ import com.android.tradefed.targetprep.ITargetPreparer;
 import com.android.tradefed.targetprep.TestAppInstallSetup;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.testtype.IBuildReceiver;
+import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.testtype.suite.ValidateSuiteConfigHelper;
 
 import com.google.common.base.Joiner;
@@ -37,7 +38,9 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Validation tests to run against the configuration in general-tests.zip to ensure they can all
@@ -49,6 +52,33 @@ import java.util.List;
 public class GeneralTestsConfigValidation implements IBuildReceiver {
 
     private IBuildInfo mBuild;
+
+    /**
+     * List of the officially supported runners in general-tests. Any new addition should go through
+     * a review to ensure all runners have a high quality bar.
+     */
+    private static final Set<String> SUPPORTED_TEST_RUNNERS =
+            new HashSet<>(
+                    Arrays.asList(
+                            // Cts runners
+                            "com.android.compatibility.common.tradefed.testtype.JarHostTest",
+                            "com.android.compatibility.testtype.DalvikTest",
+                            "com.android.compatibility.testtype.LibcoreTest",
+                            "com.drawelements.deqp.runner.DeqpTestRunner",
+                            // Tradefed runners
+                            "com.android.tradefed.testtype.InstrumentationTest",
+                            "com.android.tradefed.testtype.AndroidJUnitTest",
+                            "com.android.tradefed.testtype.HostTest",
+                            "com.android.tradefed.testtype.GTest",
+                            "com.android.tradefed.testtype.HostGTest",
+                            "com.android.tradefed.testtype.IsolatedHostTest",
+                            "com.android.tradefed.testtype.python.PythonBinaryHostTest",
+                            "com.android.tradefed.testtype.binary.ExecutableHostTest",
+                            "com.android.tradefed.testtype.rust.RustBinaryHostTest",
+                            "com.android.tradefed.testtype.rust.RustBinaryTest",
+                            "com.android.tradefed.testtype.StubTest",
+                            // Others
+                            "com.google.android.deviceconfig.RebootTest"));
 
     @Override
     public void setBuild(IBuildInfo buildInfo) {
@@ -76,6 +106,18 @@ public class GeneralTestsConfigValidation implements IBuildReceiver {
                 ValidateSuiteConfigHelper.validateConfig(c);
 
                 ensureApkUninstalled(configName, c.getTargetPreparers());
+
+                for (IRemoteTest test : c.getTests()) {
+                    // Check that all the tests runners are well supported.
+                    if (!SUPPORTED_TEST_RUNNERS.contains(test.getClass().getCanonicalName())) {
+                        throw new ConfigurationException(
+                                String.format(
+                                        "testtype %s is not officially supported in general-tests. "
+                                                + "The supported ones are: %s",
+                                        test.getClass().getCanonicalName(),
+                                        SUPPORTED_TEST_RUNNERS));
+                    }
+                }
                 // Add more checks if necessary
             } catch (ConfigurationException e) {
                 errors.add(String.format("\t%s: %s", configName, e.getMessage()));
