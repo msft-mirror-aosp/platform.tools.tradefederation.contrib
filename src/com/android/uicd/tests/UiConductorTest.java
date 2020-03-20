@@ -163,7 +163,7 @@ public class UiConductorTest implements IRemoteTest {
                 FileUtil.chmod(binary, EXECUTABLE);
             }
         } catch (IOException ex) {
-            throw new DeviceNotAvailableException(ex.getMessage());
+            throw new RuntimeException(ex);
         }
 
         RunUtil rUtil = new RunUtil();

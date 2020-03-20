@@ -32,37 +32,31 @@ import org.junit.Assert;
  * IInvocationContextReceiver} to get the full invocation metadata. In this example we implement
  * both but you should only implement one or the other.
  */
-public class HelloWorldMultiDevices implements IRemoteTest, IInvocationContextReceiver {
-
-    private IInvocationContext mContext;
-
-    @Override
-    public void setInvocationContext(IInvocationContext invocationContext) {
-        mContext = invocationContext;
-    }
+public class HelloWorldMultiDevices implements IRemoteTest {
 
     @Override
     public void run(TestInformation testInfo, ITestInvocationListener listener)
             throws DeviceNotAvailableException {
+        IInvocationContext context = testInfo.getContext();
         // We can also use the IInvocationContext information, which have various functions to
         // access the ITestDevice or IBuildInfo.
-        for (ITestDevice device : mContext.getDevices()) {
+        for (ITestDevice device : context.getDevices()) {
             CLog.i(
                     "Hello World!  device '%s' from context with build '%s'",
-                    device.getSerialNumber(), mContext.getBuildInfo(device));
+                    device.getSerialNumber(), context.getBuildInfo(device));
         }
 
         // We can do a look up by the device name in the configuration using the IInvocationContext
-        for (String deviceName : mContext.getDeviceConfigNames()) {
+        for (String deviceName : context.getDeviceConfigNames()) {
             CLog.i(
                     "device '%s' has the name '%s' in the config.",
-                    mContext.getDevice(deviceName).getSerialNumber(), deviceName);
+                    context.getDevice(deviceName).getSerialNumber(), deviceName);
         }
 
         // if the device name is known, doing a direct look up is possible.
-        Assert.assertNotNull(mContext.getDevice("device1"));
+        Assert.assertNotNull(context.getDevice("device1"));
         CLog.i(
                 "device named device1 direct look up is '%s'",
-                mContext.getDevice("device1").getSerialNumber());
+                context.getDevice("device1").getSerialNumber());
     }
 }
