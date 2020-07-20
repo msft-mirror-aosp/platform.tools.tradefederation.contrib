@@ -463,12 +463,15 @@ public class CameraPerformanceTest extends CameraTestBase {
             setSummary(parseToCtsMetrics(parser));
             parser.nextTag();
             parser.require(XmlPullParser.END_TAG, null, SUMMARY_TAG);
-            parser.nextTag();
-            if (parser.getName().equals(DETAIL_TAG)) {
-                while (parser.nextTag() == XmlPullParser.START_TAG) {
-                    addDetail(parseToCtsMetrics(parser));
+            parser.next();
+            int eventType = parser.getEventType();
+            if (eventType != XmlPullParser.END_DOCUMENT) {
+                if (parser.getName().equals(DETAIL_TAG)) {
+                    while (parser.nextTag() == XmlPullParser.START_TAG) {
+                        addDetail(parseToCtsMetrics(parser));
+                    }
+                    parser.require(XmlPullParser.END_TAG, null, DETAIL_TAG);
                 }
-                parser.require(XmlPullParser.END_TAG, null, DETAIL_TAG);
             }
         }
 
