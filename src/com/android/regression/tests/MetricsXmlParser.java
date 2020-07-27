@@ -69,11 +69,11 @@ public class MetricsXmlParser {
         private TestDescription mCurrentTest = null;
 
         private Metrics mMetrics;
-        private Set<String> mBlacklistMetrics;
+        private Set<String> mBlocklistMetrics;
 
-        public MetricsXmlHandler(Metrics metrics, Set<String> blacklistMetrics) {
+        public MetricsXmlHandler(Metrics metrics, Set<String> blocklistMetrics) {
             mMetrics = metrics;
-            mBlacklistMetrics = blacklistMetrics;
+            mBlocklistMetrics = blocklistMetrics;
         }
 
         @Override
@@ -94,14 +94,14 @@ public class MetricsXmlParser {
             if (RUNMETRIC_TAG.equalsIgnoreCase(name)) {
                 String metricName = getMandatoryAttribute(name, "name", attributes);
                 String metricValue = getMandatoryAttribute(name, "value", attributes);
-                if (!mBlacklistMetrics.contains(metricName)) {
+                if (!mBlocklistMetrics.contains(metricName)) {
                     mMetrics.addRunMetric(metricName, metricValue);
                 }
             }
             if (TESTMETRIC_TAG.equalsIgnoreCase(name)) {
                 String metricName = getMandatoryAttribute(name, "name", attributes);
                 String metricValue = getMandatoryAttribute(name, "value", attributes);
-                if (!mBlacklistMetrics.contains(metricName)) {
+                if (!mBlocklistMetrics.contains(metricName)) {
                     mMetrics.addTestMetric(mCurrentTest, metricName, metricValue);
                 }
             }
@@ -123,19 +123,19 @@ public class MetricsXmlParser {
     /**
      * Parses xml data contained in given input files.
      *
-     * @param blacklistMetrics ignore the metrics with these names
+     * @param blocklistMetrics ignore the metrics with these names
      * @param strictMode whether to throw an exception when metric validation fails
      * @param metricXmlFiles a list of metric xml files
      * @return a Metric object containing metrics from all metric files
      * @throws ParseException if input could not be parsed
      */
     public static Metrics parse(
-            Set<String> blacklistMetrics, boolean strictMode, List<File> metricXmlFiles)
+            Set<String> blocklistMetrics, boolean strictMode, List<File> metricXmlFiles)
             throws ParseException {
         Metrics metrics = new Metrics(strictMode);
         for (File xml : metricXmlFiles) {
             try (InputStream is = new BufferedInputStream(new FileInputStream(xml))) {
-                parse(metrics, blacklistMetrics, is);
+                parse(metrics, blocklistMetrics, is);
             } catch (Exception e) {
                 throw new ParseException("Unable to parse " + xml.getPath(), e);
             }
@@ -145,13 +145,13 @@ public class MetricsXmlParser {
     }
 
     @VisibleForTesting
-    public static Metrics parse(Metrics metrics, Set<String> blacklistMetrics, InputStream is)
+    public static Metrics parse(Metrics metrics, Set<String> blocklistMetrics, InputStream is)
             throws ParseException {
         try {
             SAXParserFactory parserFactory = SAXParserFactory.newInstance();
             parserFactory.setNamespaceAware(true);
             SAXParser parser = parserFactory.newSAXParser();
-            parser.parse(is, new MetricsXmlHandler(metrics, blacklistMetrics));
+            parser.parse(is, new MetricsXmlHandler(metrics, blocklistMetrics));
             return metrics;
         } catch (ParserConfigurationException | SAXException | IOException e) {
             throw new ParseException(e);
