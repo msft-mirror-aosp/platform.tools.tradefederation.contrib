@@ -77,7 +77,7 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
     /** Allow a 15 second buffer between the monkey run time and the delta uptime. */
     public static final long UPTIME_BUFFER = 15 * 1000;
 
-    private static final String DEVICE_WHITELIST_PATH = "/data/local/tmp/monkey_whitelist.txt";
+    private static final String DEVICE_ALLOWLIST_PATH = "/data/local/tmp/monkey_allowlist.txt";
 
     /**
      * am command template to launch app intent with same action, category and task flags as if user
@@ -210,11 +210,11 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
     private Collection<String> mMonkeyArgs = new LinkedList<>();
 
     @Option(
-            name = "use-pkg-whitelist-file",
+            name = "use-pkg-allowlist-file",
             description =
                     "Whether to use the monkey "
                             + "--pkg-whitelist-file option to work around cmdline length limits")
-    private boolean mUseWhitelistFile = false;
+    private boolean mUseAllowlistFile = false;
 
     @Option(
             name = "monkey-timeout",
@@ -347,10 +347,10 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
             getRunUtil().sleep(5000);
         }
 
-        if (mUseWhitelistFile) {
+        if (mUseAllowlistFile) {
             // Use \r\n for new lines on the device.
-            String whitelist = ArrayUtil.join("\r\n", setSubtract(mPackages, mExcludePackages));
-            device.pushString(whitelist.toString(), DEVICE_WHITELIST_PATH);
+            String allowlist = ArrayUtil.join("\r\n", setSubtract(mPackages, mExcludePackages));
+            device.pushString(allowlist.toString(), DEVICE_ALLOWLIST_PATH);
         }
 
         // Generate the monkey command to run, given the options
@@ -576,7 +576,7 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
         List<String> cmdList = new LinkedList<>();
         cmdList.add("monkey");
 
-        if (!mUseWhitelistFile) {
+        if (!mUseAllowlistFile) {
             for (String pkg : setSubtract(mPackages, mExcludePackages)) {
                 cmdList.add("-p");
                 cmdList.add(pkg);
@@ -603,9 +603,9 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
             cmdList.add("--ignore-timeouts");
         }
 
-        if (mUseWhitelistFile) {
+        if (mUseAllowlistFile) {
             cmdList.add("--pkg-whitelist-file");
-            cmdList.add(DEVICE_WHITELIST_PATH);
+            cmdList.add(DEVICE_ALLOWLIST_PATH);
         }
 
         for (String arg : mMonkeyArgs) {
