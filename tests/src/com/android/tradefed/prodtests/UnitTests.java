@@ -18,11 +18,11 @@ package com.android.tradefed.prodtests;
 import com.android.build.tests.ImageStatsTest;
 import com.android.continuous.SmokeTestTest;
 import com.android.monkey.MonkeyBaseTest;
+import com.android.performance.tests.DDBenchmarkTestTest;
 import com.android.regression.tests.DetectRegressionTest;
 import com.android.regression.tests.MetricsTest;
 import com.android.regression.tests.MetricsXmlParserTest;
 import com.android.scenario.AppSetupTest;
-
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
@@ -43,6 +43,9 @@ import org.junit.runners.Suite.SuiteClasses;
 
     // monkey
     MonkeyBaseTest.class,
+
+    // performance
+    DDBenchmarkTestTest.class,
 
     // regression
     DetectRegressionTest.class,
