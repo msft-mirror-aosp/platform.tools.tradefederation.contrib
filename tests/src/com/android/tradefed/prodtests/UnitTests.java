@@ -19,6 +19,7 @@ import com.android.build.tests.ImageStatsTest;
 import com.android.continuous.SmokeTestTest;
 import com.android.monkey.MonkeyBaseTest;
 import com.android.performance.tests.DDBenchmarkTestTest;
+import com.android.performance.tests.InodeopBenchmarkTestTest;
 import com.android.regression.tests.DetectRegressionTest;
 import com.android.regression.tests.MetricsTest;
 import com.android.regression.tests.MetricsXmlParserTest;
@@ -46,6 +47,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
     // performance
     DDBenchmarkTestTest.class,
+    InodeopBenchmarkTestTest.class,
 
     // regression
     DetectRegressionTest.class,
