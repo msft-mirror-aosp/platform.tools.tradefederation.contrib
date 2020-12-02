@@ -18,7 +18,6 @@ package com.android.scenario;
 import com.android.tradefed.config.Option;
 import com.android.tradefed.config.OptionClass;
 import com.android.tradefed.device.DeviceNotAvailableException;
-import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.testtype.AndroidJUnitTest;
 
@@ -62,12 +61,11 @@ public class AppSetup extends AndroidJUnitTest {
      * Run the test the same way the superclass does and perform the additional setup/cleanup steps.
      */
     @Override
-    public void run(TestInformation testInfo, final ITestInvocationListener listener)
-            throws DeviceNotAvailableException {
+    public void run(final ITestInvocationListener listener) throws DeviceNotAvailableException {
         if(mDisable) {
             return;
         }
-        runTest(testInfo, listener);
+        runTest(listener);
 
         // TODO(harrytczhang@): Switch to a solution based on test rule injection after b/123281375.
         if (mDropCacheWhenFinished) {
@@ -84,8 +82,8 @@ public class AppSetup extends AndroidJUnitTest {
      * @hide
      */
     @VisibleForTesting
-    protected void runTest(TestInformation testInfo, final ITestInvocationListener listener)
+    protected void runTest(final ITestInvocationListener listener)
             throws DeviceNotAvailableException {
-        super.run(testInfo, listener);
+        super.run(listener);
     }
 }

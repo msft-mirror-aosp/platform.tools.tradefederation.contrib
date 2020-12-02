@@ -28,7 +28,6 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
 import com.android.tradefed.config.OptionSetter;
 import com.android.tradefed.device.ITestDevice;
-import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.result.ITestInvocationListener;
 
 import org.junit.Before;
@@ -48,14 +47,13 @@ public class AppSetupTest {
 
     @Mock ITestDevice mTestDevice;
     @Mock ITestInvocationListener mListener;
-    @Mock TestInformation mTestInfo;
 
     @Before
     public void setUp() throws Exception {
         initMocks(this);
         mAppSetup = spy(new AppSetup());
         doReturn(mTestDevice).when(mAppSetup).getDevice();
-        doNothing().when(mAppSetup).runTest(any(),any());
+        doNothing().when(mAppSetup).runTest(any());
         mOptionSetter = new OptionSetter(mAppSetup);
     }
 
@@ -63,14 +61,14 @@ public class AppSetupTest {
     @Test
     public void testDropCachesOption_set() throws Exception {
         mOptionSetter.setOptionValue(DROP_CACHE_OPTION, String.valueOf(true));
-        mAppSetup.run(mTestInfo, mListener);
+        mAppSetup.run(mListener);
         verify(mTestDevice).executeShellCommand(eq(AppSetup.DROP_CACHE_COMMAND));
     }
 
     /** Test that the test does not drop cache when not configured to. */
     @Test
     public void testDropCachesOption_notSet() throws Exception {
-        mAppSetup.run(mTestInfo, mListener);
+        mAppSetup.run(mListener);
         verify(mTestDevice, never()).executeShellCommand(eq(AppSetup.DROP_CACHE_COMMAND));
     }
 
@@ -79,7 +77,7 @@ public class AppSetupTest {
     public void testKillAppsOption() throws Exception {
         mOptionSetter.setOptionValue(KILL_APPS_OPTION, "app1");
         mOptionSetter.setOptionValue(KILL_APPS_OPTION, "app2");
-        mAppSetup.run(mTestInfo, mListener);
+        mAppSetup.run(mListener);
         verify(mTestDevice, times(2))
                 .executeShellCommand(
                         startsWith(String.format(AppSetup.KILL_APP_COMMAND_TEMPLATE, "")));
@@ -93,7 +91,7 @@ public class AppSetupTest {
     @Test
     public void testDisableOption() throws Exception {
         mOptionSetter.setOptionValue("disable", String.valueOf(true));
-        mAppSetup.run(mTestInfo, mListener);
-        verify(mAppSetup, times(0)).runTest(any(), any());
+        mAppSetup.run(mListener);
+        verify(mAppSetup, times(0)).runTest(any());
     }
 }

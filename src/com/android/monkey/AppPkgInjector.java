@@ -24,7 +24,6 @@ import com.android.tradefed.config.IConfigurationReceiver;
 import com.android.tradefed.config.Option;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
-import com.android.tradefed.result.error.DeviceErrorIdentifier;
 import com.android.tradefed.targetprep.BaseTargetPreparer;
 import com.android.tradefed.targetprep.BuildError;
 import com.android.tradefed.targetprep.ITargetPreparer;
@@ -75,8 +74,7 @@ public class AppPkgInjector extends BaseTargetPreparer implements IConfiguration
                 throw new BuildError(
                         String.format(
                                 "aapt parse of %s failed", apkFile.getFile().getAbsolutePath()),
-                        device.getDeviceDescriptor(),
-                        DeviceErrorIdentifier.AAPT_PARSER_FAILED);
+                        device.getDeviceDescriptor());
             }
             String pkgName = aapt.getPackageName();
             if (pkgName == null) {
