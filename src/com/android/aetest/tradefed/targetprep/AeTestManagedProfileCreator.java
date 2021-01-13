@@ -26,9 +26,11 @@ import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.targetprep.AltDirBehavior;
 import com.android.tradefed.targetprep.BaseTargetPreparer;
+import com.android.tradefed.targetprep.BuildError;
 import com.android.tradefed.targetprep.ITargetCleaner;
 import com.android.tradefed.targetprep.ITargetPreparer;
 import com.android.tradefed.targetprep.TargetSetupError;
+import com.android.tradefed.targetprep.TestAppInstallSetup;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,6 +46,9 @@ import java.util.List;
  */
 @OptionClass(alias = "ae-test-create-managed-profile")
 public class AeTestManagedProfileCreator extends BaseTargetPreparer implements ITargetCleaner {
+    public static final String MANAGED_PROFILE_USER_ID = "managed_profile_user_id";
+
+    private final TestAppInstallSetup mInstallPreparer = new TestAppInstallSetup();
 
     @Option(
             name = "profile-owner-component",
@@ -56,10 +61,11 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
     @Option(
             name = "alt-dir",
             description =
-                    "Alternate directory to look for the apk if the apk is not in the tests "
-                            + "zip file. For each alternate dir, will look in //, //data/app, "
-                            + "//DATA/app, //DATA/app/apk_name/ and //DATA/priv-app/apk_name/. "
-                            + "Can be repeated. Look for apks in last alt-dir first.")
+                    "Alternate directory to look for the profile owner apk if the apk is not in "
+                            + "the tests zip file. For each alternate dir, will look in //, "
+                            + "//data/app, //DATA/app, //DATA/app/apk_name/ and "
+                            + "//DATA/priv-app/apk_name/. Can be repeated. Look for apks in "
+                            + "last alt-dir first.")
     private List<File> mAltDirs = new ArrayList<>();
 
     @Option(
@@ -69,13 +75,28 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
                             + "when searching for apks to install")
     private AltDirBehavior mAltDirBehavior = AltDirBehavior.FALLBACK;
 
+    @Option(
+            name = "test-app-file-name",
+            description =
+                    "the name of an apk file to be installed in the work profile. Can be repeated.")
+    private List<String> mTestFiles = new ArrayList<>();
+
+    @Option(
+            name = "test-app-alt-dir",
+            description =
+                    "Alternate directory to look for the apk if the apk is not in the tests "
+                            + "zip file. For each alternate dir, will look in //, //data/app, "
+                            + "//DATA/app, //DATA/app/apk_name/ and //DATA/priv-app/apk_name/. "
+                            + "Can be repeated. Look for apks in last alt-dir first.")
+    private List<File> mAltTestDirs = new ArrayList<>();
+
     /** UserID for user in managed profile. */
     private int mManagedProfileUserId;
 
     /** {@inheritDoc} */
     @Override
     public void setUp(ITestDevice device, IBuildInfo buildInfo)
-            throws TargetSetupError, DeviceNotAvailableException {
+            throws TargetSetupError, DeviceNotAvailableException, BuildError {
         String pmCommand =
                 "pm create-user --profileOf 0 --managed "
                         + "TestProfile_"
@@ -93,6 +114,10 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
         device.startUser(mManagedProfileUserId);
 
         CLog.i(String.format("New user created: %d", mManagedProfileUserId));
+        buildInfo.addBuildAttribute(MANAGED_PROFILE_USER_ID, String.valueOf(mManagedProfileUserId));
+
+        // Install required test APKs in the managed profile
+        installTestApks(device, buildInfo);
 
         if (mProfileOwnerComponent != null && mProfileOwnerApk != null) {
             device.installPackageForUser(
@@ -114,7 +139,6 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
                             "%s was set as profile owner of user %d",
                             mProfileOwnerComponent, mManagedProfileUserId));
         }
-
         // Reboot device to create the apps in managed profile.
         device.reboot();
         device.waitForDeviceAvailable();
@@ -124,7 +148,28 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
     @Override
     public void tearDown(ITestDevice testDevice, IBuildInfo buildInfo, Throwable throwable)
             throws DeviceNotAvailableException {
+        mInstallPreparer.tearDown(testDevice, buildInfo, throwable);
         testDevice.removeUser(mManagedProfileUserId);
+    }
+
+    private void installTestApks(ITestDevice device, IBuildInfo buildInfo)
+            throws DeviceNotAvailableException, TargetSetupError, BuildError {
+        if (mTestFiles.isEmpty()) {
+            return;
+        }
+        CLog.i(
+                String.format(
+                        "Installing the following test APKs in user %d: \n%s",
+                        mManagedProfileUserId, mTestFiles));
+        mInstallPreparer.setUserId(mManagedProfileUserId);
+        mInstallPreparer.setShouldGrantPermission(true);
+        for (String file : mTestFiles) {
+            mInstallPreparer.addTestFileName(file);
+        }
+        for (File dir : mAltTestDirs) {
+            mInstallPreparer.setAltDir(dir);
+        }
+        mInstallPreparer.setUp(device, buildInfo);
     }
 
     /**
