@@ -29,4 +29,5 @@
     <result_reporter class="com.android.tradefed.result.suite.SuiteResultReporter" />
     <template-include name="reporters" default="empty" />
     <template-include name="metrics_collector" default="empty" />
+    <template-include name="metric_post_processor" default="empty" />
 </configuration>
