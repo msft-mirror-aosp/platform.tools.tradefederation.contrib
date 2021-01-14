@@ -63,6 +63,7 @@ public class CameraPerformanceTest extends CameraTestBase {
             new ImmutableMultimap.Builder<String, String>()
                     .put(TEST_CAMERA_LAUNCH, "Camera launch time")
                     .put(TEST_CAMERA_LAUNCH, "Camera start preview time")
+                    .put(TEST_CAMERA_LAUNCH, "Camera camera close time")
                     .put(TEST_SINGLE_CAPTURE, "Camera capture result latency")
                     .put(TEST_REPROCESSING_LATENCY, "YUV reprocessing shot to shot latency")
                     .put(TEST_REPROCESSING_LATENCY, "opaque reprocessing shot to shot latency")
