@@ -22,6 +22,7 @@ import static com.android.uicd.tests.UiConductorTest.MODE_OPTION;
 import static com.android.uicd.tests.UiConductorTest.MODULE_NAME;
 import static com.android.uicd.tests.UiConductorTest.DEFAULT_TIMEOUT;
 import static com.android.uicd.tests.UiConductorTest.OUTPUT_OPTION;
+import static com.android.uicd.tests.UiConductorTest.TEST_RESULT_PATH;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,6 +31,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,9 +45,9 @@ import com.android.tradefed.util.CommandStatus;
 import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.IRunUtil;
 
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -79,6 +81,7 @@ public class UiConductorTestTest {
     private Path mWorkDir;
     private Path mCliJar;
     private Path mTestFile;
+    private Path mTestResultFile;
 
     @Before
     public void setUp() throws Exception {
@@ -111,6 +114,9 @@ public class UiConductorTestTest {
         // Default to successful execution
         CommandResult result = new CommandResult(CommandStatus.SUCCESS);
         when(mRunUtil.runTimedCmd(anyLong(), any())).thenReturn(result);
+        mTestResultFile = mWorkDir.resolve("test.json").resolve(TEST_RESULT_PATH);
+        Files.createDirectories(mTestResultFile.getParent());
+        Files.write(mTestResultFile, "{}".getBytes());
     }
 
     @After
@@ -124,9 +130,9 @@ public class UiConductorTestTest {
         mTest.run(mTestInfo, mListener);
         // CLI was launched once with right arguments
         verify(mRunUtil).runTimedCmd(eq(DEFAULT_TIMEOUT.toMillis()),
-                eq("java"), eq("-jar"), anyString(),
-                eq(INPUT_OPTION), anyString(),
-                eq(OUTPUT_OPTION), anyString(),
+                eq("java"), eq("-jar"), eq(mCliJar.toString()),
+                eq(INPUT_OPTION), eq(mTestFile.toString()),
+                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("test.json").toString()),
                 eq(MODE_OPTION), eq("SINGLE"),
                 eq(DEVICES_OPTION), eq(DEVICE_SERIAL));
         // A single test was run with no failures
@@ -136,14 +142,12 @@ public class UiConductorTestTest {
         verify(mListener).testEnded(eq(test), anyLong(), anyMap());
     }
 
-    @Ignore // TODO(b/173457826): Fix file management
     @Test(expected = IllegalArgumentException.class)
     public void testRun_cliNotFound() throws Exception {
         mCliJar.toFile().delete();
         mTest.run(mTestInfo, mListener);
     }
 
-    @Ignore // TODO(b/173457810): Fix command error handling
     @Test
     public void testRun_timeout() throws Exception {
         CommandResult result = new CommandResult(CommandStatus.TIMED_OUT);
@@ -152,7 +156,6 @@ public class UiConductorTestTest {
         verify(mListener).testFailed(any(), anyString());
     }
 
-    @Ignore // TODO(b/173457810): Fix command error handling
     @Test
     public void testRun_error() throws Exception {
         CommandResult result = new CommandResult(CommandStatus.EXCEPTION);
@@ -163,20 +166,31 @@ public class UiConductorTestTest {
 
     @Test
     public void testRun_failure() throws Exception {
-        // TODO(b/173457810): Verify test result parsing after fixing file management
+        JSONObject result =
+                new JSONObject()
+                        .put("playStatus", "FAIL")
+                        .put("actionId", "actionId")
+                        .put("content", "content")
+                        .put("validationDetails", "validationDetails");
+        Files.write(mTestResultFile, result.toString().getBytes());
+        mTest.run(mTestInfo, mListener);
+        verify(mListener).testFailed(any(), eq("actionId (content): validationDetails"));
     }
 
     @Test
     public void testRun_testResultNotFound() throws Exception {
-        // TODO(b/173457810): Verify test result parsing after fixing file management
+        mTestResultFile.toFile().delete();
+        mTest.run(mTestInfo, mListener);
+        verify(mListener).testFailed(any(), anyString());
     }
 
     @Test
     public void testRun_invalidTestResult() throws Exception {
-        // TODO(b/173457810): Verify test result parsing after fixing file management
+        Files.write(mTestResultFile, "invalid".getBytes());
+        mTest.run(mTestInfo, mListener);
+        verify(mListener).testFailed(any(), anyString());
     }
 
-    @Ignore // TODO(b/173457826): Fix file management
     @Test(expected = IllegalArgumentException.class)
     public void testRun_testNotFound() throws Exception {
         mTestFile.toFile().delete();
@@ -185,7 +199,19 @@ public class UiConductorTestTest {
 
     @Test
     public void testRun_testDirectory() throws Exception {
-        // TODO(b/173457826): Verify test directory handling after fixing file management
+        // Create directory with two test files (test1.json, nested_dir/test2.json)
+        Path testDir = mInputDir.resolve("test_dir");
+        Files.createDirectories(testDir.resolve("nested_dir"));
+        Files.createFile(testDir.resolve("test1.json"));
+        Files.createFile(testDir.resolve("nested_dir/test2.json"));
+        mOptionSetter.setOptionValue("uicd-test", TEST_KEY, testDir.toString());
+        // Three tests executed (including test.json) and their name includes the relative path
+        mTest.run(mTestInfo, mListener);
+        verify(mListener, times(3)).testStarted(any(), anyLong());
+        TestDescription test1 = new TestDescription(MODULE_NAME, "test_dir$test1.json");
+        verify(mListener).testStarted(eq(test1), anyLong());
+        TestDescription test2 = new TestDescription(MODULE_NAME, "test_dir$nested_dir$test2.json");
+        verify(mListener).testStarted(eq(test2), anyLong());
     }
 
     @Test
@@ -205,9 +231,9 @@ public class UiConductorTestTest {
         mTest.run(mTestInfo, mListener);
         // Play mode was modified
         verify(mRunUtil).runTimedCmd(eq(DEFAULT_TIMEOUT.toMillis()),
-                eq("java"), eq("-jar"), anyString(),
-                eq(INPUT_OPTION), anyString(),
-                eq(OUTPUT_OPTION), anyString(),
+                eq("java"), eq("-jar"), eq(mCliJar.toString()),
+                eq(INPUT_OPTION), eq(mTestFile.toString()),
+                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("test.json").toString()),
                 eq(MODE_OPTION), eq("PLAYALL"),
                 eq(DEVICES_OPTION), eq(DEVICE_SERIAL));
     }
@@ -219,9 +245,9 @@ public class UiConductorTestTest {
         mTest.run(mTestInfo, mListener);
         // Global variables were concatenated and added
         verify(mRunUtil).runTimedCmd(eq(DEFAULT_TIMEOUT.toMillis()),
-                eq("java"), eq("-jar"), anyString(),
-                eq(INPUT_OPTION), anyString(),
-                eq(OUTPUT_OPTION), anyString(),
+                eq("java"), eq("-jar"), eq(mCliJar.toString()),
+                eq(INPUT_OPTION), eq(mTestFile.toString()),
+                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("test.json").toString()),
                 eq(MODE_OPTION), eq("SINGLE"),
                 eq(DEVICES_OPTION), eq(DEVICE_SERIAL),
                 eq(GLOBAL_VARIABLE_OPTION), eq("key1=value1,key2=value2"));
