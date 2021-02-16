@@ -15,12 +15,11 @@
  */
 package com.android.uicd.tests;
 
-import com.android.tradefed.build.IBuildInfo;
 import com.android.tradefed.config.Option;
-import com.android.tradefed.config.Option.Importance;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.invoker.TestInformation;
+import com.android.tradefed.invoker.logger.CurrentInvocation;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.result.FileInputStreamSource;
 import com.android.tradefed.result.ITestInvocationListener;
@@ -30,8 +29,11 @@ import com.android.tradefed.result.TestDescription;
 import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.FileUtil;
+import com.android.tradefed.util.IRunUtil;
 import com.android.tradefed.util.MultiMap;
 import com.android.tradefed.util.RunUtil;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -39,7 +41,10 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -55,55 +60,45 @@ import java.util.UUID;
  */
 public class UiConductorTest implements IRemoteTest {
 
-    @Option(
-        name = "uicd-cli-jar",
-        description = "The cli jar that runs the user provided tests in commandline",
-        importance = Importance.IF_UNSET
-    )
-    private File cliJar;
+    static final String MODULE_NAME = UiConductorTest.class.getSimpleName();
+    static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(30L);
+
+    static final String INPUT_OPTION = "--input";
+    static final String OUTPUT_OPTION = "--output";
+    static final String DEVICES_OPTION = "--devices";
+    static final String MODE_OPTION = "--mode";
+    static final String GLOBAL_VARIABLE_OPTION = "--global_variable";
 
     @Option(
-        name = "commandline-action-executable",
-        description =
-                "the filesystem path of the binaries that are ran through command line actions on UICD. Can be repeated.",
-        importance = Importance.IF_UNSET
-    )
-    private Collection<File> binaries = new ArrayList<File>();
+            name = "uicd-cli-jar",
+            description = "UICD CLI jar to use when running tests",
+            mandatory = true)
+    private File mCliJar;
 
     @Option(
-        name = "global-variables",
-        description = "Global variable (uicd_key1=value1,uicd_key2=value2)",
-        importance = Importance.ALWAYS
-    )
-    private MultiMap<String, String> globalVariables = new MultiMap<>();
+            name = "commandline-action-executable",
+            description = "Additional binaries needed by command line actions. Can be repeated.")
+    private Collection<File> mBinaries = new ArrayList<>();
 
     @Option(
-        name = "play-mode",
-        description = "Play Mode (SINGLE|MULTIDEVICE|PLAYALL).",
-        importance = Importance.ALWAYS
-    )
-    private String playMode = "SINGLE";
+            name = "global-variables",
+            description = "Global variable (uicd_key1=value1,uicd_key2=value2)")
+    private MultiMap<String, String> mGlobalVariables = new MultiMap<>();
 
-    @Option(name = "test-name", description = "Name of the test.", importance = Importance.ALWAYS)
-    private String testName = "Your test results are here";
+    @Option(name = "play-mode", description = "Play mode (SINGLE|MULTIDEVICE|PLAYALL)")
+    private String mPlayMode = "SINGLE";
 
     // Same key can have multiple test files because global-variables can be referenced using the
     // that particular key and shared across different tests.
     // Refer res/config/uicd/uiconductor-globalvariable-sample.xml for more information.
     @Option(
-        name = "uicd-test",
-        description =
-                "the filesystem path of the json test files or directory of multiple json test files that needs to be run on devices. Can be repeated.",
-        importance = Importance.IF_UNSET
-    )
-    private MultiMap<String, File> uicdTest = new MultiMap<>();
+            name = "uicd-test",
+            description = "JSON test file or directory of JSON test files to run. Can be repeated.",
+            mandatory = true)
+    private MultiMap<String, File> mTests = new MultiMap<>();
 
-    @Option(
-        name = "test-timeout",
-        description = "Time out for each test.",
-        importance = Importance.IF_UNSET
-    )
-    private int testTimeout = 1800000;
+    @Option(name = "test-timeout", description = "Timeout for each test case")
+    private Duration mTestTimeout = DEFAULT_TIMEOUT;
 
     private static final String BINARY_RELATIVE_PATH = "binary";
 
@@ -113,44 +108,36 @@ public class UiConductorTest implements IRemoteTest {
 
     private static final String RESULTS_RELATIVE_PATH = "result";
 
-    private static final String OPTION_SYMBOL = "-";
-    private static final String INPUT_OPTION_SHORT_NAME = "i";
-    private static final String OUTPUT_OPTION_SHORT_NAME = "o";
-    private static final String DEVICES_OPTION_SHORT_NAME = "d";
-    private static final String MODE_OPTION_SHORT_NAME = "m";
-    private static final String GLOBAL_VARIABLE_OPTION_SHORT_NAME = "g";
-
     private static final String CHILDRENRESULT_ATTRIBUTE = "childrenResult";
     private static final String PLAYSTATUS_ATTRIBUTE = "playStatus";
     private static final String VALIDATIONDETAILS_ATTRIBUTE = "validationDetails";
 
     private static final String EXECUTABLE = "u+x";
 
-    private static String baseFilePath = System.getenv("HOME") + "/tmp/uicd-on-tf";
-
-    Map<ITestDevice, IBuildInfo> deviceInfos;
+    private IRunUtil mRunUtil;
+    private Path mWorkDir;
+    private List<ITestDevice> mDevices;
 
     @Override
     public void run(TestInformation testInfo, ITestInvocationListener listener)
             throws DeviceNotAvailableException {
-        deviceInfos = testInfo.getContext().getDeviceBuildMap();
+        mWorkDir = createWorkDir();
+        mDevices = testInfo.getDevices();
         CLog.i("Starting the UIConductor tests:\n");
-        String runId = UUID.randomUUID().toString();
-        baseFilePath = Paths.get(baseFilePath, runId).toString();
-        String jarFileDir = Paths.get(baseFilePath, BINARY_RELATIVE_PATH).toString();
-        String testFilesDir = Paths.get(baseFilePath, TESTS_RELATIVE_PATH).toString();
-        String binaryFilesDir = Paths.get(baseFilePath).toString();
+        String jarFileDir = mWorkDir.resolve(BINARY_RELATIVE_PATH).toString();
+        String testFilesDir = mWorkDir.resolve(TESTS_RELATIVE_PATH).toString();
+        String binaryFilesDir = mWorkDir.toString();
         File jarFile;
         MultiMap<String, File> copiedTestFileMap = new MultiMap<>();
-        if (cliJar == null || !cliJar.exists()) {
+        if (mCliJar == null || !mCliJar.exists()) {
             CLog.e("Unable to fetch provided binary.\n");
             return;
         }
         try {
-            jarFile = copyFile(cliJar.getAbsolutePath(), jarFileDir);
+            jarFile = copyFile(mCliJar.getAbsolutePath(), jarFileDir);
             FileUtil.chmod(jarFile, EXECUTABLE);
 
-            for (Map.Entry<String, File> testFileOrDirEntry : uicdTest.entries()) {
+            for (Map.Entry<String, File> testFileOrDirEntry : mTests.entries()) {
                 copiedTestFileMap.putAll(
                         copyFile(
                                 testFileOrDirEntry.getKey(),
@@ -158,7 +145,7 @@ public class UiConductorTest implements IRemoteTest {
                                 testFilesDir));
             }
 
-            for (File binaryFile : binaries) {
+            for (File binaryFile : mBinaries) {
                 File binary = copyFile(binaryFile.getAbsolutePath(), binaryFilesDir);
                 FileUtil.chmod(binary, EXECUTABLE);
             }
@@ -166,14 +153,13 @@ public class UiConductorTest implements IRemoteTest {
             throw new RuntimeException(ex);
         }
 
-        RunUtil rUtil = new RunUtil();
-        rUtil.setWorkingDir(new File(baseFilePath));
+        mRunUtil = createRunUtil();
+        mRunUtil.setWorkingDir(mWorkDir.toFile());
         long runStartTime = System.currentTimeMillis();
-        listener.testRunStarted(testName, copiedTestFileMap.values().size());
+        listener.testRunStarted(MODULE_NAME, copiedTestFileMap.values().size());
         for (Map.Entry<String, File> testFileEntry : copiedTestFileMap.entries()) {
             runTest(
                     listener,
-                    rUtil,
                     jarFile,
                     testFileEntry.getKey(),
                     testFileEntry.getValue().getName());
@@ -181,35 +167,42 @@ public class UiConductorTest implements IRemoteTest {
 
         listener.testRunEnded(
                 System.currentTimeMillis() - runStartTime, new HashMap<String, String>());
-        FileUtil.recursiveDelete(new File(baseFilePath));
         CLog.i("Finishing the ui conductor tests\n");
     }
 
-    public void runTest(
-            ITestInvocationListener listener,
-            RunUtil rUtil,
-            File jarFile,
-            String key,
-            String testFileName) {
-        TestDescription testDesc =
-                new TestDescription(this.getClass().getSimpleName(), testFileName);
+    /** @return {@link IRunUtil} instance to use */
+    @VisibleForTesting
+    IRunUtil createRunUtil() {
+        return new RunUtil();
+    }
+
+    /** @return working directory to use */
+    @VisibleForTesting
+    Path createWorkDir() {
+        try {
+            return FileUtil.createTempDir(MODULE_NAME, CurrentInvocation.getWorkFolder()).toPath();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void runTest(
+            ITestInvocationListener listener, File jarFile, String key, String testFileName) {
+        TestDescription testDesc = new TestDescription(MODULE_NAME, testFileName);
         listener.testStarted(testDesc, System.currentTimeMillis());
 
         String testId = UUID.randomUUID().toString();
-        CommandResult cmndRes =
-                rUtil.runTimedCmd(testTimeout, getCommand(jarFile, testFileName, testId, key));
-        logInfo(testId, "STD", cmndRes.getStdout());
-        logInfo(testId, "ERR", cmndRes.getStderr());
+        String[] command = buildCommand(jarFile, testFileName, testId, key);
+        CommandResult commandResult = mRunUtil.runTimedCmd(mTestTimeout.toMillis(), command);
+        logInfo(testId, "STD", commandResult.getStdout());
+        logInfo(testId, "ERR", commandResult.getStderr());
 
         File resultsFile =
-                new File(
-                        Paths.get(
-                                        baseFilePath,
-                                        OUTPUT_RELATIVE_PATH,
-                                        testId,
-                                        RESULTS_RELATIVE_PATH,
-                                        "action_execution_result")
-                                .toString());
+                mWorkDir.resolve(OUTPUT_RELATIVE_PATH)
+                        .resolve(testId)
+                        .resolve(RESULTS_RELATIVE_PATH)
+                        .resolve("action_execution_result")
+                        .toFile();
 
         if (resultsFile.exists()) {
             try {
@@ -326,41 +319,41 @@ public class UiConductorTest implements IRemoteTest {
     }
 
     private String getPlaymodeArgForUicdBin() {
-        return !playMode.isEmpty() ? playMode : "";
+        return !mPlayMode.isEmpty() ? mPlayMode : "";
     }
 
     private String getDevIdsArgsForUicdBin() {
         List<String> devIds = new ArrayList<>();
-        for (ITestDevice device : deviceInfos.keySet()) {
+        for (ITestDevice device : mDevices) {
             devIds.add(device.getSerialNumber());
         }
         return String.join(",", devIds);
     }
 
-    private String[] getCommand(File jarFile, String testFileName, String testId, String key) {
+    private String[] buildCommand(File jarFile, String testFileName, String testId, String key) {
         List<String> command = new ArrayList<>();
         command.add("java");
         command.add("-jar");
         command.add(jarFile.getAbsolutePath());
         if (!getTestFilesArgsForUicdBin(TESTS_RELATIVE_PATH, testFileName).isEmpty()) {
-            command.add(OPTION_SYMBOL + INPUT_OPTION_SHORT_NAME);
+            command.add(INPUT_OPTION);
             command.add(getTestFilesArgsForUicdBin(TESTS_RELATIVE_PATH, testFileName));
         }
         if (!getOutFilesArgsForUicdBin(OUTPUT_RELATIVE_PATH + "/" + testId).isEmpty()) {
-            command.add(OPTION_SYMBOL + OUTPUT_OPTION_SHORT_NAME);
+            command.add(OUTPUT_OPTION);
             command.add(getOutFilesArgsForUicdBin(OUTPUT_RELATIVE_PATH + "/" + testId));
         }
         if (!getPlaymodeArgForUicdBin().isEmpty()) {
-            command.add(OPTION_SYMBOL + MODE_OPTION_SHORT_NAME);
+            command.add(MODE_OPTION);
             command.add(getPlaymodeArgForUicdBin());
         }
         if (!getDevIdsArgsForUicdBin().isEmpty()) {
-            command.add(OPTION_SYMBOL + DEVICES_OPTION_SHORT_NAME);
+            command.add(DEVICES_OPTION);
             command.add(getDevIdsArgsForUicdBin());
         }
-        if (globalVariables.containsKey(key)) {
-            command.add(OPTION_SYMBOL + GLOBAL_VARIABLE_OPTION_SHORT_NAME);
-            command.add(String.join(",", globalVariables.get(key)));
+        if (mGlobalVariables.containsKey(key)) {
+            command.add(GLOBAL_VARIABLE_OPTION);
+            command.add(String.join(",", mGlobalVariables.get(key)));
         }
         return command.toArray(new String[] {});
     }
