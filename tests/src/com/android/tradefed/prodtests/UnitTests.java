@@ -24,6 +24,8 @@ import com.android.regression.tests.DetectRegressionTest;
 import com.android.regression.tests.MetricsTest;
 import com.android.regression.tests.MetricsXmlParserTest;
 import com.android.scenario.AppSetupTest;
+import com.android.uicd.tests.UiConductorTestTest;
+
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
@@ -56,6 +58,9 @@ import org.junit.runners.Suite.SuiteClasses;
 
     // scenario
     AppSetupTest.class,
+
+    // UICD
+    UiConductorTestTest.class,
 })
 public class UnitTests {
     // empty of purpose
