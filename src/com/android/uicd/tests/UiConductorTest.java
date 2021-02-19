@@ -16,6 +16,7 @@
 package com.android.uicd.tests;
 
 import com.android.tradefed.config.Option;
+import com.android.tradefed.config.OptionClass;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.invoker.TestInformation;
@@ -26,6 +27,7 @@ import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.result.LogDataType;
 import com.android.tradefed.result.TestDescription;
 import com.android.tradefed.testtype.IRemoteTest;
+import com.android.tradefed.testtype.ITestFilterReceiver;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.IRunUtil;
@@ -47,8 +49,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -57,7 +61,8 @@ import java.util.stream.Collectors;
  * and extract the jar and apks required for the tests. Please look at the sample xmls in
  * res/config/uicd to configure your tests.
  */
-public class UiConductorTest implements IRemoteTest {
+@OptionClass(alias = "uicd")
+public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
 
     static final String MODULE_NAME = UiConductorTest.class.getSimpleName();
     static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(30L);
@@ -85,7 +90,7 @@ public class UiConductorTest implements IRemoteTest {
         private final TestDescription mDesc;
 
         private UiConductorTestCase(String id, String key, File file) {
-            mId = id.replace(File.separator, "$");
+            mId = id;
             mKey = key;
             mFile = file;
             mDesc = new TestDescription(MODULE_NAME, mId);
@@ -123,8 +128,54 @@ public class UiConductorTest implements IRemoteTest {
     @Option(name = "test-timeout", description = "Timeout for each test case")
     private Duration mTestTimeout = DEFAULT_TIMEOUT;
 
+    @Option(name = "include-filter", description = "Regex filters used to find tests to include")
+    private Set<String> mIncludeFilters = new HashSet<>();
+
+    @Option(name = "exclude-filter", description = "Regex filters used to find tests to exclude")
+    private Set<String> mExcludeFilters = new HashSet<>();
+
     private IRunUtil mRunUtil;
     private Path mWorkDir;
+
+    @Override
+    public void addIncludeFilter(String filter) {
+        mIncludeFilters.add(filter);
+    }
+
+    @Override
+    public void addAllIncludeFilters(Set<String> filters) {
+        mIncludeFilters.addAll(filters);
+    }
+
+    @Override
+    public void addExcludeFilter(String filter) {
+        mExcludeFilters.add(filter);
+    }
+
+    @Override
+    public void addAllExcludeFilters(Set<String> filters) {
+        mExcludeFilters.addAll(filters);
+    }
+
+    @Override
+    public Set<String> getIncludeFilters() {
+        return mIncludeFilters;
+    }
+
+    @Override
+    public Set<String> getExcludeFilters() {
+        return mExcludeFilters;
+    }
+
+    @Override
+    public void clearIncludeFilters() {
+        mIncludeFilters.clear();
+    }
+
+    @Override
+    public void clearExcludeFilters() {
+        mExcludeFilters.clear();
+    }
 
     @Override
     public void run(TestInformation testInfo, ITestInvocationListener listener)
@@ -155,6 +206,10 @@ public class UiConductorTest implements IRemoteTest {
         long runStartTime = System.currentTimeMillis();
         listener.testRunStarted(MODULE_NAME, testCases.size());
         for (UiConductorTestCase testCase : testCases) {
+            if (!shouldRunTestCase(testCase)) {
+                CLog.d("Skipping %s", testCase.mDesc);
+                continue;
+            }
             runTestCase(listener, testCase, testInfo.getDevices());
         }
         listener.testRunEnded(System.currentTimeMillis() - runStartTime, Map.of());
@@ -174,6 +229,15 @@ public class UiConductorTest implements IRemoteTest {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /** @return true if the test case should be executed */
+    private boolean shouldRunTestCase(UiConductorTestCase testCase) {
+        String testId = testCase.mDesc.toString();
+        if (mExcludeFilters.stream().anyMatch(testId::matches)) {
+            return false;
+        }
+        return mIncludeFilters.isEmpty() || mIncludeFilters.stream().anyMatch(testId::matches);
     }
 
     /** Execute a test case using the UICD CLI and parses the result. */
