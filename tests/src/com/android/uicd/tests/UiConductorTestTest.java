@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -208,9 +209,9 @@ public class UiConductorTestTest {
         // Three tests executed (including test.json) and their name includes the relative path
         mTest.run(mTestInfo, mListener);
         verify(mListener, times(3)).testStarted(any(), anyLong());
-        TestDescription test1 = new TestDescription(MODULE_NAME, "test_dir$test1.json");
+        TestDescription test1 = new TestDescription(MODULE_NAME, "test_dir/test1.json");
         verify(mListener).testStarted(eq(test1), anyLong());
-        TestDescription test2 = new TestDescription(MODULE_NAME, "test_dir$nested_dir$test2.json");
+        TestDescription test2 = new TestDescription(MODULE_NAME, "test_dir/nested_dir/test2.json");
         verify(mListener).testStarted(eq(test2), anyLong());
     }
 
@@ -251,5 +252,22 @@ public class UiConductorTestTest {
                 eq(MODE_OPTION), eq("SINGLE"),
                 eq(DEVICES_OPTION), eq(DEVICE_SERIAL),
                 eq(GLOBAL_VARIABLE_OPTION), eq("key1=value1,key2=value2"));
+    }
+
+    @Test
+    public void testRun_withFilter() throws Exception {
+        Path one = Files.createFile(mInputDir.resolve("one.json"));
+        mOptionSetter.setOptionValue("uicd-test", TEST_KEY, one.toString());
+        Path two = Files.createFile(mInputDir.resolve("two.json"));
+        mOptionSetter.setOptionValue("uicd-test", TEST_KEY, two.toString());
+        // Exclude test.json by regex, executes one.json and two.json
+        mTest.addExcludeFilter(".*test.json");
+        mTest.run(mTestInfo, mListener);
+        verify(mListener, times(2)).testStarted(any(), anyLong());
+        clearInvocations(mListener);
+        // Include one.json, only executes one.json
+        mTest.addIncludeFilter("UiConductorTest#one.json");
+        mTest.run(mTestInfo, mListener);
+        verify(mListener, times(1)).testStarted(any(), anyLong());
     }
 }
