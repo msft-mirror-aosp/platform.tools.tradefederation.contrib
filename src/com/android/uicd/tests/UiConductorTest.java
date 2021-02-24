@@ -15,23 +15,26 @@
  */
 package com.android.uicd.tests;
 
-import com.android.tradefed.build.IBuildInfo;
 import com.android.tradefed.config.Option;
-import com.android.tradefed.config.Option.Importance;
+import com.android.tradefed.config.OptionClass;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
 import com.android.tradefed.invoker.TestInformation;
+import com.android.tradefed.invoker.logger.CurrentInvocation;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.result.FileInputStreamSource;
 import com.android.tradefed.result.ITestInvocationListener;
-import com.android.tradefed.result.InputStreamSource;
 import com.android.tradefed.result.LogDataType;
 import com.android.tradefed.result.TestDescription;
 import com.android.tradefed.testtype.IRemoteTest;
+import com.android.tradefed.testtype.ITestFilterReceiver;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.FileUtil;
+import com.android.tradefed.util.IRunUtil;
 import com.android.tradefed.util.MultiMap;
 import com.android.tradefed.util.RunUtil;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -39,13 +42,18 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * The class enables user to run their pre-recorded UICD tests on tradefed. Go to
@@ -53,314 +61,346 @@ import java.util.UUID;
  * and extract the jar and apks required for the tests. Please look at the sample xmls in
  * res/config/uicd to configure your tests.
  */
-public class UiConductorTest implements IRemoteTest {
+@OptionClass(alias = "uicd")
+public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
+
+    static final String MODULE_NAME = UiConductorTest.class.getSimpleName();
+    static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(30L);
+
+    static final String INPUT_OPTION = "--input";
+    static final String OUTPUT_OPTION = "--output";
+    static final String DEVICES_OPTION = "--devices";
+    static final String MODE_OPTION = "--mode";
+    static final String GLOBAL_VARIABLE_OPTION = "--global_variable";
+
+    static final String TEST_RESULT_PATH = "result/action_execution_result";
+
+    /** Testing mode. */
+    public enum PlayMode {
+        SINGLE,
+        MULTIDEVICE,
+        PLAYALL,
+    }
+
+    /** Test case information, contains the test file and its metadata. */
+    private static class UiConductorTestCase {
+        private final String mId;
+        private final String mKey;
+        private final File mFile;
+        private final TestDescription mDesc;
+
+        private UiConductorTestCase(String id, String key, File file) {
+            mId = id;
+            mKey = key;
+            mFile = file;
+            mDesc = new TestDescription(MODULE_NAME, mId);
+        }
+    }
 
     @Option(
-        name = "uicd-cli-jar",
-        description = "The cli jar that runs the user provided tests in commandline",
-        importance = Importance.IF_UNSET
-    )
-    private File cliJar;
+            name = "uicd-cli-jar",
+            description = "UICD CLI jar to use when running tests",
+            mandatory = true)
+    private File mCliJar;
 
     @Option(
-        name = "commandline-action-executable",
-        description =
-                "the filesystem path of the binaries that are ran through command line actions on UICD. Can be repeated.",
-        importance = Importance.IF_UNSET
-    )
-    private Collection<File> binaries = new ArrayList<File>();
+            name = "commandline-action-executable",
+            description = "Additional binaries needed by command line actions. Can be repeated.")
+    private Collection<File> mBinaries = new ArrayList<>();
 
     @Option(
-        name = "global-variables",
-        description = "Global variable (uicd_key1=value1,uicd_key2=value2)",
-        importance = Importance.ALWAYS
-    )
-    private MultiMap<String, String> globalVariables = new MultiMap<>();
+            name = "global-variables",
+            description = "Global variable (uicd_key1=value1,uicd_key2=value2)")
+    private MultiMap<String, String> mGlobalVariables = new MultiMap<>();
 
-    @Option(
-        name = "play-mode",
-        description = "Play Mode (SINGLE|MULTIDEVICE|PLAYALL).",
-        importance = Importance.ALWAYS
-    )
-    private String playMode = "SINGLE";
-
-    @Option(name = "test-name", description = "Name of the test.", importance = Importance.ALWAYS)
-    private String testName = "Your test results are here";
+    @Option(name = "play-mode", description = "Play mode (SINGLE|MULTIDEVICE|PLAYALL)")
+    private PlayMode mPlayMode = PlayMode.SINGLE;
 
     // Same key can have multiple test files because global-variables can be referenced using the
     // that particular key and shared across different tests.
     // Refer res/config/uicd/uiconductor-globalvariable-sample.xml for more information.
     @Option(
-        name = "uicd-test",
-        description =
-                "the filesystem path of the json test files or directory of multiple json test files that needs to be run on devices. Can be repeated.",
-        importance = Importance.IF_UNSET
-    )
-    private MultiMap<String, File> uicdTest = new MultiMap<>();
+            name = "uicd-test",
+            description = "JSON test file or directory of JSON test files to run. Can be repeated.",
+            mandatory = true)
+    private MultiMap<String, File> mTests = new MultiMap<>();
 
-    @Option(
-        name = "test-timeout",
-        description = "Time out for each test.",
-        importance = Importance.IF_UNSET
-    )
-    private int testTimeout = 1800000;
+    @Option(name = "test-timeout", description = "Timeout for each test case")
+    private Duration mTestTimeout = DEFAULT_TIMEOUT;
 
-    private static final String BINARY_RELATIVE_PATH = "binary";
+    @Option(name = "include-filter", description = "Regex filters used to find tests to include")
+    private Set<String> mIncludeFilters = new HashSet<>();
 
-    private static final String OUTPUT_RELATIVE_PATH = "output";
+    @Option(name = "exclude-filter", description = "Regex filters used to find tests to exclude")
+    private Set<String> mExcludeFilters = new HashSet<>();
 
-    private static final String TESTS_RELATIVE_PATH = "tests";
+    private IRunUtil mRunUtil;
+    private Path mWorkDir;
 
-    private static final String RESULTS_RELATIVE_PATH = "result";
+    @Override
+    public void addIncludeFilter(String filter) {
+        mIncludeFilters.add(filter);
+    }
 
-    private static final String OPTION_SYMBOL = "-";
-    private static final String INPUT_OPTION_SHORT_NAME = "i";
-    private static final String OUTPUT_OPTION_SHORT_NAME = "o";
-    private static final String DEVICES_OPTION_SHORT_NAME = "d";
-    private static final String MODE_OPTION_SHORT_NAME = "m";
-    private static final String GLOBAL_VARIABLE_OPTION_SHORT_NAME = "g";
+    @Override
+    public void addAllIncludeFilters(Set<String> filters) {
+        mIncludeFilters.addAll(filters);
+    }
 
-    private static final String CHILDRENRESULT_ATTRIBUTE = "childrenResult";
-    private static final String PLAYSTATUS_ATTRIBUTE = "playStatus";
-    private static final String VALIDATIONDETAILS_ATTRIBUTE = "validationDetails";
+    @Override
+    public void addExcludeFilter(String filter) {
+        mExcludeFilters.add(filter);
+    }
 
-    private static final String EXECUTABLE = "u+x";
+    @Override
+    public void addAllExcludeFilters(Set<String> filters) {
+        mExcludeFilters.addAll(filters);
+    }
 
-    private static String baseFilePath = System.getenv("HOME") + "/tmp/uicd-on-tf";
+    @Override
+    public Set<String> getIncludeFilters() {
+        return mIncludeFilters;
+    }
 
-    Map<ITestDevice, IBuildInfo> deviceInfos;
+    @Override
+    public Set<String> getExcludeFilters() {
+        return mExcludeFilters;
+    }
+
+    @Override
+    public void clearIncludeFilters() {
+        mIncludeFilters.clear();
+    }
+
+    @Override
+    public void clearExcludeFilters() {
+        mExcludeFilters.clear();
+    }
 
     @Override
     public void run(TestInformation testInfo, ITestInvocationListener listener)
             throws DeviceNotAvailableException {
-        deviceInfos = testInfo.getContext().getDeviceBuildMap();
-        CLog.i("Starting the UIConductor tests:\n");
-        String runId = UUID.randomUUID().toString();
-        baseFilePath = Paths.get(baseFilePath, runId).toString();
-        String jarFileDir = Paths.get(baseFilePath, BINARY_RELATIVE_PATH).toString();
-        String testFilesDir = Paths.get(baseFilePath, TESTS_RELATIVE_PATH).toString();
-        String binaryFilesDir = Paths.get(baseFilePath).toString();
-        File jarFile;
-        MultiMap<String, File> copiedTestFileMap = new MultiMap<>();
-        if (cliJar == null || !cliJar.exists()) {
-            CLog.e("Unable to fetch provided binary.\n");
+        if (!mCliJar.isFile()) {
+            throw new IllegalArgumentException(
+                    String.format("UICD CLI jar %s not found", mCliJar.getAbsolutePath()));
+        }
+
+        // Find test cases to execute
+        List<UiConductorTestCase> testCases = new ArrayList<>();
+        for (Map.Entry<String, File> entry : mTests.entries()) {
+            String key = entry.getKey();
+            File file = entry.getValue();
+            testCases.addAll(getTestCases(key, file));
+        }
+
+        // Create work directory and copy binaries into it
+        mWorkDir = createWorkDir();
+        mRunUtil = createRunUtil();
+        mRunUtil.setWorkingDir(mWorkDir.toFile());
+        for (File binary : mBinaries) {
+            Path copiedBinary = copyFile(binary.toPath(), mWorkDir);
+            copiedBinary.toFile().setExecutable(true);
+        }
+
+        // Execute test cases
+        long runStartTime = System.currentTimeMillis();
+        listener.testRunStarted(MODULE_NAME, testCases.size());
+        for (UiConductorTestCase testCase : testCases) {
+            if (!shouldRunTestCase(testCase)) {
+                CLog.d("Skipping %s", testCase.mDesc);
+                continue;
+            }
+            runTestCase(listener, testCase, testInfo.getDevices());
+        }
+        listener.testRunEnded(System.currentTimeMillis() - runStartTime, Map.of());
+    }
+
+    /** @return {@link IRunUtil} instance to use */
+    @VisibleForTesting
+    IRunUtil createRunUtil() {
+        return new RunUtil();
+    }
+
+    /** @return working directory to use */
+    @VisibleForTesting
+    Path createWorkDir() {
+        try {
+            return FileUtil.createTempDir(MODULE_NAME, CurrentInvocation.getWorkFolder()).toPath();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** @return true if the test case should be executed */
+    private boolean shouldRunTestCase(UiConductorTestCase testCase) {
+        String testId = testCase.mDesc.toString();
+        if (mExcludeFilters.stream().anyMatch(testId::matches)) {
+            return false;
+        }
+        return mIncludeFilters.isEmpty() || mIncludeFilters.stream().anyMatch(testId::matches);
+    }
+
+    /** Execute a test case using the UICD CLI and parses the result. */
+    private void runTestCase(
+            ITestInvocationListener listener,
+            UiConductorTestCase testCase,
+            List<ITestDevice> devices) {
+        listener.testStarted(testCase.mDesc, System.currentTimeMillis());
+
+        // Execute the UICD command and handle the result
+        String[] command = buildCommand(testCase, devices);
+        CLog.i("Running %s (command: %s)", testCase.mDesc, Arrays.asList(command));
+        CommandResult result = mRunUtil.runTimedCmd(mTestTimeout.toMillis(), command);
+        switch (result.getStatus()) {
+            case SUCCESS:
+                CLog.i(
+                        "Command succeeded, stdout = [%s], stderr = [%s].",
+                        result.getStdout(), result.getStderr());
+                Path resultFile = mWorkDir.resolve(testCase.mId).resolve(TEST_RESULT_PATH);
+                verifyTestResultFile(listener, testCase, resultFile.toFile());
+                break;
+            case FAILED:
+            case EXCEPTION:
+                CLog.e(
+                        "Command failed, stdout = [%s], stderr = [%s].",
+                        result.getStdout(), result.getStderr());
+                listener.testFailed(testCase.mDesc, "Command failed");
+                break;
+            case TIMED_OUT:
+                CLog.e(
+                        "Command timed out, stdout = [%s], stderr = [%s].",
+                        result.getStdout(), result.getStderr());
+                listener.testFailed(testCase.mDesc, "Command timed out");
+                break;
+        }
+
+        listener.testEnded(testCase.mDesc, System.currentTimeMillis(), Map.of());
+    }
+
+    /** Parse a test result file and report test failures. */
+    private void verifyTestResultFile(
+            ITestInvocationListener listener, UiConductorTestCase testCase, File resultFile) {
+        if (!resultFile.isFile()) {
+            listener.testFailed(
+                    testCase.mDesc, String.format("Test result file %s not found", resultFile));
             return;
         }
+
         try {
-            jarFile = copyFile(cliJar.getAbsolutePath(), jarFileDir);
-            FileUtil.chmod(jarFile, EXECUTABLE);
-
-            for (Map.Entry<String, File> testFileOrDirEntry : uicdTest.entries()) {
-                copiedTestFileMap.putAll(
-                        copyFile(
-                                testFileOrDirEntry.getKey(),
-                                testFileOrDirEntry.getValue().getAbsolutePath(),
-                                testFilesDir));
+            String resultContent = FileUtil.readStringFromFile(resultFile);
+            List<String> errors = parseTestResultJson(new JSONObject(resultContent));
+            if (!errors.isEmpty()) {
+                listener.testFailed(testCase.mDesc, String.join("\n", errors));
             }
-
-            for (File binaryFile : binaries) {
-                File binary = copyFile(binaryFile.getAbsolutePath(), binaryFilesDir);
-                FileUtil.chmod(binary, EXECUTABLE);
-            }
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
+        } catch (IOException | JSONException e) {
+            CLog.e("Failed to parse test result file", e);
+            listener.testFailed(
+                    testCase.mDesc,
+                    String.format("Failed to parse test result file: %s", e.getMessage()));
         }
-
-        RunUtil rUtil = new RunUtil();
-        rUtil.setWorkingDir(new File(baseFilePath));
-        long runStartTime = System.currentTimeMillis();
-        listener.testRunStarted(testName, copiedTestFileMap.values().size());
-        for (Map.Entry<String, File> testFileEntry : copiedTestFileMap.entries()) {
-            runTest(
-                    listener,
-                    rUtil,
-                    jarFile,
-                    testFileEntry.getKey(),
-                    testFileEntry.getValue().getName());
+        try (FileInputStreamSource inputStream = new FileInputStreamSource(resultFile)) {
+            listener.testLog(testCase.mId + "_result", LogDataType.TEXT, inputStream);
         }
-
-        listener.testRunEnded(
-                System.currentTimeMillis() - runStartTime, new HashMap<String, String>());
-        FileUtil.recursiveDelete(new File(baseFilePath));
-        CLog.i("Finishing the ui conductor tests\n");
     }
 
-    public void runTest(
-            ITestInvocationListener listener,
-            RunUtil rUtil,
-            File jarFile,
-            String key,
-            String testFileName) {
-        TestDescription testDesc =
-                new TestDescription(this.getClass().getSimpleName(), testFileName);
-        listener.testStarted(testDesc, System.currentTimeMillis());
+    /** Recursively parses the test result JSON, looking for failures. */
+    private List<String> parseTestResultJson(JSONObject result) {
+        if (result == null) {
+            return List.of();
+        }
 
-        String testId = UUID.randomUUID().toString();
-        CommandResult cmndRes =
-                rUtil.runTimedCmd(testTimeout, getCommand(jarFile, testFileName, testId, key));
-        logInfo(testId, "STD", cmndRes.getStdout());
-        logInfo(testId, "ERR", cmndRes.getStderr());
-
-        File resultsFile =
-                new File(
-                        Paths.get(
-                                        baseFilePath,
-                                        OUTPUT_RELATIVE_PATH,
-                                        testId,
-                                        RESULTS_RELATIVE_PATH,
-                                        "action_execution_result")
-                                .toString());
-
-        if (resultsFile.exists()) {
-            try {
-                String content = FileUtil.readStringFromFile(resultsFile);
-                JSONObject result = new JSONObject(content);
-                List<String> errors = new ArrayList<>();
-                errors = parseResult(errors, result);
-                if (!errors.isEmpty()) {
-                    listener.testFailed(testDesc, errors.get(0));
-                    CLog.i("Test %s failed due to following errors: \n", testDesc.getTestName());
-                    for (String error : errors) {
-                        CLog.i(error + "\n");
-                    }
-                }
-            } catch (IOException | JSONException e) {
-                CLog.e(e);
-            }
-            String testResultFileName = testFileName + "_action_execution_result";
-            try (InputStreamSource iSSource = new FileInputStreamSource(resultsFile)) {
-                listener.testLog(testResultFileName, LogDataType.TEXT, iSSource);
+        List<String> errors = new ArrayList<>();
+        JSONArray childrenResult = result.optJSONArray("childrenResult");
+        if (childrenResult != null) {
+            for (int i = 0; i < childrenResult.length(); i++) {
+                errors.addAll(parseTestResultJson(childrenResult.optJSONObject(i)));
             }
         }
-        listener.testEnded(testDesc, System.currentTimeMillis(), new HashMap<String, String>());
-    }
-
-    private void logInfo(String testId, String cmdOutputType, String content) {
-        CLog.i(
-                "==========================="
-                        + cmdOutputType
-                        + " logs for "
-                        + testId
-                        + " starts===========================\n");
-        CLog.i(content);
-        CLog.i(
-                "==========================="
-                        + cmdOutputType
-                        + " logs for "
-                        + testId
-                        + " ends===========================\n");
-    }
-
-    private List<String> parseResult(List<String> errors, JSONObject result) throws JSONException {
-
-        if (result != null) {
-            if (result.has(CHILDRENRESULT_ATTRIBUTE)) {
-                JSONArray childResults = result.getJSONArray(CHILDRENRESULT_ATTRIBUTE);
-                for (int i = 0; i < childResults.length(); i++) {
-                    errors = parseResult(errors, childResults.getJSONObject(i));
-                }
-            }
-
-            if (result.has(PLAYSTATUS_ATTRIBUTE)
-                    && result.getString(PLAYSTATUS_ATTRIBUTE).equalsIgnoreCase("FAIL")) {
-                if (result.has(VALIDATIONDETAILS_ATTRIBUTE)) {
-                    errors.add(result.getString(VALIDATIONDETAILS_ATTRIBUTE));
-                }
-            }
+        if ("FAIL".equalsIgnoreCase(result.optString("playStatus"))) {
+            String error =
+                    String.format(
+                            "%s (%s): %s",
+                            result.optString("actionId"),
+                            result.optString("content"),
+                            result.optString("validationDetails"));
+            errors.add(error);
         }
         return errors;
     }
 
-    private File copyFile(String srcFilePath, String destDirPath) throws IOException {
-        File srcFile = new File(srcFilePath);
-        File destDir = new File(destDirPath);
-        if (srcFile.isDirectory()) {
-            for (File file : srcFile.listFiles()) {
-                copyFile(file.getAbsolutePath(), Paths.get(destDirPath, file.getName()).toString());
+    /**
+     * Copy a file into a directory.
+     *
+     * @param srcFile file to copy
+     * @param destDir directory to copy into
+     * @return copied file
+     */
+    private Path copyFile(Path srcFile, Path destDir) {
+        try {
+            Files.createDirectories(destDir);
+            Path destFile = destDir.resolve(srcFile.getFileName());
+            return Files.copy(srcFile, destFile);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Find all test cases in the specified file or directory.
+     *
+     * @param key test key to associate with test cases
+     * @param file file or directory to look in
+     * @return list of test cases
+     */
+    private List<UiConductorTestCase> getTestCases(String key, File file) {
+        if (!file.exists()) {
+            throw new IllegalArgumentException(
+                    String.format("Test file %s not found", file.getAbsolutePath()));
+        }
+        if (file.isDirectory()) {
+            try {
+                // Find all nested regular files and use their relative paths as IDs
+                Path dirPath = file.toPath().toAbsolutePath();
+                return Files.walk(dirPath)
+                        .filter(Files::isRegularFile)
+                        .map(
+                                filePath -> {
+                                    String id = dirPath.getParent().relativize(filePath).toString();
+                                    return new UiConductorTestCase(id, key, filePath.toFile());
+                                })
+                        .collect(Collectors.toList());
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
         }
-        if (!destDir.isDirectory() && !destDir.mkdirs()) {
-            throw new IOException(
-                    String.format("Could not create directory %s", destDir.getAbsolutePath()));
-        }
-        File destFile = new File(Paths.get(destDir.toString(), srcFile.getName()).toString());
-        FileUtil.copyFile(srcFile, destFile);
-        return destFile;
+        // Normal file, use filename as ID
+        return List.of(new UiConductorTestCase(file.getName(), key, file));
     }
 
-    // copy file to destDirPath while maintaining a map of key that refers to that src file
-    private MultiMap<String, File> copyFile(String key, String srcFilePath, String destDirPath)
-            throws IOException {
-        MultiMap<String, File> copiedTestFileMap = new MultiMap<>();
-        File srcFile = new File(srcFilePath);
-        File destDir = new File(destDirPath);
-        if (srcFile.isDirectory()) {
-            for (File file : srcFile.listFiles()) {
-                copiedTestFileMap.putAll(
-                        copyFile(
-                                key,
-                                file.getAbsolutePath(),
-                                Paths.get(destDirPath, file.getName()).toString()));
-            }
-        }
-        if (!destDir.isDirectory() && !destDir.mkdirs()) {
-            throw new IOException(
-                    String.format("Could not create directory %s", destDir.getAbsolutePath()));
-        }
-        if (srcFile.isFile()) {
-            File destFile = new File(Paths.get(destDir.toString(), srcFile.getName()).toString());
-            FileUtil.copyFile(srcFile, destFile);
-            copiedTestFileMap.put(key, destFile);
-        }
-        return copiedTestFileMap;
-    }
-
-    private String getTestFilesArgsForUicdBin(String testFilesDir, String filename) {
-        return (!testFilesDir.isEmpty() && !filename.isEmpty())
-                ? Paths.get(testFilesDir, filename).toString()
-                : "";
-    }
-
-    private String getOutFilesArgsForUicdBin(String outFilesDir) {
-        return !outFilesDir.isEmpty() ? outFilesDir : "";
-    }
-
-    private String getPlaymodeArgForUicdBin() {
-        return !playMode.isEmpty() ? playMode : "";
-    }
-
-    private String getDevIdsArgsForUicdBin() {
-        List<String> devIds = new ArrayList<>();
-        for (ITestDevice device : deviceInfos.keySet()) {
-            devIds.add(device.getSerialNumber());
-        }
-        return String.join(",", devIds);
-    }
-
-    private String[] getCommand(File jarFile, String testFileName, String testId, String key) {
+    /** Constructs the command to execute for a test case. */
+    private String[] buildCommand(UiConductorTestCase testCase, List<ITestDevice> devices) {
         List<String> command = new ArrayList<>();
         command.add("java");
         command.add("-jar");
-        command.add(jarFile.getAbsolutePath());
-        if (!getTestFilesArgsForUicdBin(TESTS_RELATIVE_PATH, testFileName).isEmpty()) {
-            command.add(OPTION_SYMBOL + INPUT_OPTION_SHORT_NAME);
-            command.add(getTestFilesArgsForUicdBin(TESTS_RELATIVE_PATH, testFileName));
-        }
-        if (!getOutFilesArgsForUicdBin(OUTPUT_RELATIVE_PATH + "/" + testId).isEmpty()) {
-            command.add(OPTION_SYMBOL + OUTPUT_OPTION_SHORT_NAME);
-            command.add(getOutFilesArgsForUicdBin(OUTPUT_RELATIVE_PATH + "/" + testId));
-        }
-        if (!getPlaymodeArgForUicdBin().isEmpty()) {
-            command.add(OPTION_SYMBOL + MODE_OPTION_SHORT_NAME);
-            command.add(getPlaymodeArgForUicdBin());
-        }
-        if (!getDevIdsArgsForUicdBin().isEmpty()) {
-            command.add(OPTION_SYMBOL + DEVICES_OPTION_SHORT_NAME);
-            command.add(getDevIdsArgsForUicdBin());
-        }
-        if (globalVariables.containsKey(key)) {
-            command.add(OPTION_SYMBOL + GLOBAL_VARIABLE_OPTION_SHORT_NAME);
-            command.add(String.join(",", globalVariables.get(key)));
+        command.add(mCliJar.getAbsolutePath());
+        // Add input file path
+        command.add(INPUT_OPTION);
+        command.add(testCase.mFile.getAbsolutePath());
+        // Add output directory path
+        command.add(OUTPUT_OPTION);
+        command.add(mWorkDir.resolve(testCase.mId).toString());
+        // Add play mode
+        command.add(MODE_OPTION);
+        command.add(mPlayMode.name());
+        // Add device serial numbers (comma separated list)
+        command.add(DEVICES_OPTION);
+        String serials =
+                devices.stream().map(ITestDevice::getSerialNumber).collect(Collectors.joining(","));
+        command.add(serials);
+        // Add global variables if applicable
+        if (mGlobalVariables.containsKey(testCase.mKey)) {
+            command.add(GLOBAL_VARIABLE_OPTION);
+            command.add(String.join(",", mGlobalVariables.get(testCase.mKey)));
         }
         return command.toArray(new String[] {});
     }
