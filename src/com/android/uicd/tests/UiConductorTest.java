@@ -97,6 +97,9 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         }
     }
 
+    @Option(name = "work-dir", description = "Optional work directory to use")
+    private File mWorkDir;
+
     @Option(
             name = "uicd-cli-jar",
             description = "UICD CLI jar to use when running tests",
@@ -135,7 +138,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
     private Set<String> mExcludeFilters = new HashSet<>();
 
     private IRunUtil mRunUtil;
-    private Path mWorkDir;
+    private Path mOutputDir;
 
     @Override
     public void addIncludeFilter(String filter) {
@@ -194,13 +197,16 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         }
 
         // Create work directory and copy binaries into it
-        mWorkDir = createWorkDir();
+        if (mWorkDir == null) {
+            mWorkDir = createWorkDir().toFile();
+        }
         mRunUtil = createRunUtil();
-        mRunUtil.setWorkingDir(mWorkDir.toFile());
+        mRunUtil.setWorkingDir(mWorkDir);
         for (File binary : mBinaries) {
-            Path copiedBinary = copyFile(binary.toPath(), mWorkDir);
+            Path copiedBinary = copyFile(binary.toPath(), mWorkDir.toPath());
             copiedBinary.toFile().setExecutable(true);
         }
+        mOutputDir = mWorkDir.toPath().resolve("output");
 
         // Execute test cases
         long runStartTime = System.currentTimeMillis();
@@ -221,9 +227,8 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         return new RunUtil();
     }
 
-    /** @return working directory to use */
-    @VisibleForTesting
-    Path createWorkDir() {
+    /** @return temporary working directory to use if none is provided */
+    private Path createWorkDir() {
         try {
             return FileUtil.createTempDir(MODULE_NAME, CurrentInvocation.getWorkFolder()).toPath();
         } catch (IOException e) {
@@ -256,7 +261,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
                 CLog.i(
                         "Command succeeded, stdout = [%s], stderr = [%s].",
                         result.getStdout(), result.getStderr());
-                Path resultFile = mWorkDir.resolve(testCase.mId).resolve(TEST_RESULT_PATH);
+                Path resultFile = mOutputDir.resolve(testCase.mId).resolve(TEST_RESULT_PATH);
                 verifyTestResultFile(listener, testCase, resultFile.toFile());
                 break;
             case FAILED:
@@ -388,7 +393,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         command.add(testCase.mFile.getAbsolutePath());
         // Add output directory path
         command.add(OUTPUT_OPTION);
-        command.add(mWorkDir.resolve(testCase.mId).toString());
+        command.add(mOutputDir.resolve(testCase.mId).toString());
         // Add play mode
         command.add(MODE_OPTION);
         command.add(mPlayMode.name());
