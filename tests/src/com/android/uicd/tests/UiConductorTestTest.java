@@ -96,13 +96,9 @@ public class UiConductorTestTest {
             IRunUtil createRunUtil() {
                 return mRunUtil;
             }
-
-            @Override
-            Path createWorkDir() {
-                return mWorkDir;
-            }
         };
         mOptionSetter = new OptionSetter(mTest);
+        mOptionSetter.setOptionValue("work-dir", mWorkDir.toString());
         when(mTestInfo.getDevices()).thenReturn(List.of(mDevice));
         when(mDevice.getSerialNumber()).thenReturn(DEVICE_SERIAL);
 
@@ -115,7 +111,7 @@ public class UiConductorTestTest {
         // Default to successful execution
         CommandResult result = new CommandResult(CommandStatus.SUCCESS);
         when(mRunUtil.runTimedCmd(anyLong(), any())).thenReturn(result);
-        mTestResultFile = mWorkDir.resolve("test.json").resolve(TEST_RESULT_PATH);
+        mTestResultFile = mWorkDir.resolve("output/test.json").resolve(TEST_RESULT_PATH);
         Files.createDirectories(mTestResultFile.getParent());
         Files.write(mTestResultFile, "{}".getBytes());
     }
@@ -133,7 +129,7 @@ public class UiConductorTestTest {
         verify(mRunUtil).runTimedCmd(eq(DEFAULT_TIMEOUT.toMillis()),
                 eq("java"), eq("-jar"), eq(mCliJar.toString()),
                 eq(INPUT_OPTION), eq(mTestFile.toString()),
-                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("test.json").toString()),
+                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("output/test.json").toString()),
                 eq(MODE_OPTION), eq("SINGLE"),
                 eq(DEVICES_OPTION), eq(DEVICE_SERIAL));
         // A single test was run with no failures
@@ -234,7 +230,7 @@ public class UiConductorTestTest {
         verify(mRunUtil).runTimedCmd(eq(DEFAULT_TIMEOUT.toMillis()),
                 eq("java"), eq("-jar"), eq(mCliJar.toString()),
                 eq(INPUT_OPTION), eq(mTestFile.toString()),
-                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("test.json").toString()),
+                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("output/test.json").toString()),
                 eq(MODE_OPTION), eq("PLAYALL"),
                 eq(DEVICES_OPTION), eq(DEVICE_SERIAL));
     }
@@ -248,7 +244,7 @@ public class UiConductorTestTest {
         verify(mRunUtil).runTimedCmd(eq(DEFAULT_TIMEOUT.toMillis()),
                 eq("java"), eq("-jar"), eq(mCliJar.toString()),
                 eq(INPUT_OPTION), eq(mTestFile.toString()),
-                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("test.json").toString()),
+                eq(OUTPUT_OPTION), eq(mWorkDir.resolve("output/test.json").toString()),
                 eq(MODE_OPTION), eq("SINGLE"),
                 eq(DEVICES_OPTION), eq(DEVICE_SERIAL),
                 eq(GLOBAL_VARIABLE_OPTION), eq("key1=value1,key2=value2"));
