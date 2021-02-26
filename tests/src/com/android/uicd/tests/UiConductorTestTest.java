@@ -15,6 +15,7 @@
  */
 package com.android.uicd.tests;
 
+import static com.android.uicd.tests.UiConductorTest.DEFAULT_OUTPUT_PATH;
 import static com.android.uicd.tests.UiConductorTest.DEVICES_OPTION;
 import static com.android.uicd.tests.UiConductorTest.GLOBAL_VARIABLE_OPTION;
 import static com.android.uicd.tests.UiConductorTest.INPUT_OPTION;
@@ -36,15 +37,21 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.android.tradefed.build.BuildInfo;
+import com.android.tradefed.config.ConfigurationDescriptor;
 import com.android.tradefed.config.OptionSetter;
 import com.android.tradefed.device.ITestDevice;
+import com.android.tradefed.invoker.InvocationContext;
 import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.result.TestDescription;
+import com.android.tradefed.result.proto.TestRecordProto;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
 import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.IRunUtil;
+
+import com.google.protobuf.Any;
 
 import org.json.JSONObject;
 import org.junit.After;
@@ -58,6 +65,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -265,5 +273,34 @@ public class UiConductorTestTest {
         mTest.addIncludeFilter("UiConductorTest#one.json");
         mTest.run(mTestInfo, mListener);
         verify(mListener, times(1)).testStarted(any(), anyLong());
+    }
+
+    @Test
+    public void testRun_withPreviousResults() throws Exception {
+        // Create empty invocation context
+        InvocationContext context = new InvocationContext();
+        context.setConfigurationDescriptor(new ConfigurationDescriptor());
+        context.addDeviceBuildInfo(DEVICE_SERIAL, new BuildInfo());
+        // Create test case record
+        TestRecordProto.TestRecord.Builder testCase = TestRecordProto.TestRecord.newBuilder();
+        testCase.setTestRecordId("UiConductorTest#test.json");
+        testCase.setStatus(TestRecordProto.TestStatus.PASS);
+        // Create module record
+        TestRecordProto.TestRecord.Builder module = TestRecordProto.TestRecord.newBuilder();
+        module.setTestRecordId("UiConductorTest");
+        module.addChildrenBuilder().setInlineTestRecord(testCase);
+        // Write records to results file
+        TestRecordProto.TestRecord.Builder record = TestRecordProto.TestRecord.newBuilder();
+        record.setDescription(Any.pack(context.toProto()));
+        record.addChildrenBuilder().setInlineTestRecord(module);
+        File results = mInputDir.resolve(DEFAULT_OUTPUT_PATH).toFile();
+        try (FileOutputStream stream = new FileOutputStream(results)) {
+            record.build().writeDelimitedTo(stream);
+        }
+        // Previous results replayed, but the execution is skipped
+        mOptionSetter.setOptionValue("previous-results", results.getAbsolutePath());
+        mTest.run(mTestInfo, mListener);
+        verify(mListener).testStarted(any(), anyLong());
+        verify(mRunUtil, never()).runTimedCmd(anyLong(), any());
     }
 }
