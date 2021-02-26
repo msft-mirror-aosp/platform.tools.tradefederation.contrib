@@ -15,17 +15,23 @@
  */
 package com.android.uicd.tests;
 
+import com.android.ddmlib.testrunner.TestResult.TestStatus;
 import com.android.tradefed.config.Option;
 import com.android.tradefed.config.OptionClass;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.device.ITestDevice;
+import com.android.tradefed.invoker.IInvocationContext;
 import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.invoker.logger.CurrentInvocation;
 import com.android.tradefed.log.LogUtil.CLog;
+import com.android.tradefed.result.CollectingTestListener;
 import com.android.tradefed.result.FileInputStreamSource;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.result.LogDataType;
 import com.android.tradefed.result.TestDescription;
+import com.android.tradefed.result.TestResult;
+import com.android.tradefed.result.proto.FileProtoResultReporter;
+import com.android.tradefed.result.proto.TestRecordProto;
 import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.testtype.ITestFilterReceiver;
 import com.android.tradefed.util.CommandResult;
@@ -33,6 +39,8 @@ import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.IRunUtil;
 import com.android.tradefed.util.MultiMap;
 import com.android.tradefed.util.RunUtil;
+import com.android.tradefed.util.TestRecordInterpreter;
+import com.android.tradefed.util.proto.TestRecordProtoUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -55,17 +63,22 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 /**
- * The class enables user to run their pre-recorded UICD tests on tradefed. Go to
- * https://github.com/google/android-uiconductor/releases/tag/v0.1.1 to download the uicd_cli.tar.gz
- * and extract the jar and apks required for the tests. Please look at the sample xmls in
- * res/config/uicd to configure your tests.
+ * Runs pre-recorded Android UIConductor tests in Tradefed. Each provided JSON file is treated as a
+ * test case. Supports automatic retries, including file-based retries across invocations using
+ * {@link UiConductorTest.ResultReporter}. See XML configurations in res/config/uicd for examples.
+ *
+ * <p>See Also: https://github.com/google/android-uiconductor
+ * https://console.cloud.google.com/storage/browser/uicd-deps
  */
 @OptionClass(alias = "uicd")
 public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
 
     static final String MODULE_NAME = UiConductorTest.class.getSimpleName();
     static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(30L);
+    static final String DEFAULT_OUTPUT_PATH = "uicd_results.pb";
 
     static final String INPUT_OPTION = "--input";
     static final String OUTPUT_OPTION = "--output";
@@ -96,6 +109,9 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
             mDesc = new TestDescription(MODULE_NAME, mId);
         }
     }
+
+    @Option(name = "work-dir", description = "Optional work directory to use")
+    private File mWorkDir;
 
     @Option(
             name = "uicd-cli-jar",
@@ -134,8 +150,11 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
     @Option(name = "exclude-filter", description = "Regex filters used to find tests to exclude")
     private Set<String> mExcludeFilters = new HashSet<>();
 
+    @Option(name = "previous-results", description = "Previous output file to load when retrying")
+    private File mPreviousResults;
+
     private IRunUtil mRunUtil;
-    private Path mWorkDir;
+    private Path mOutputDir;
 
     @Override
     public void addIncludeFilter(String filter) {
@@ -185,6 +204,13 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
                     String.format("UICD CLI jar %s not found", mCliJar.getAbsolutePath()));
         }
 
+        // Load and process previous results
+        CollectingTestListener previousResults = this.parsePreviousResults();
+        if (previousResults != null) {
+            CLog.i("Loading previous results from %s", mPreviousResults);
+            this.loadPreviousResults(listener, previousResults);
+        }
+
         // Find test cases to execute
         List<UiConductorTestCase> testCases = new ArrayList<>();
         for (Map.Entry<String, File> entry : mTests.entries()) {
@@ -194,13 +220,16 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         }
 
         // Create work directory and copy binaries into it
-        mWorkDir = createWorkDir();
+        if (mWorkDir == null) {
+            mWorkDir = createWorkDir().toFile();
+        }
         mRunUtil = createRunUtil();
-        mRunUtil.setWorkingDir(mWorkDir.toFile());
+        mRunUtil.setWorkingDir(mWorkDir);
         for (File binary : mBinaries) {
-            Path copiedBinary = copyFile(binary.toPath(), mWorkDir);
+            Path copiedBinary = copyFile(binary.toPath(), mWorkDir.toPath());
             copiedBinary.toFile().setExecutable(true);
         }
+        mOutputDir = mWorkDir.toPath().resolve("output");
 
         // Execute test cases
         long runStartTime = System.currentTimeMillis();
@@ -221,9 +250,8 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         return new RunUtil();
     }
 
-    /** @return working directory to use */
-    @VisibleForTesting
-    Path createWorkDir() {
+    /** @return temporary working directory to use if none is provided */
+    private Path createWorkDir() {
         try {
             return FileUtil.createTempDir(MODULE_NAME, CurrentInvocation.getWorkFolder()).toPath();
         } catch (IOException e) {
@@ -256,7 +284,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
                 CLog.i(
                         "Command succeeded, stdout = [%s], stderr = [%s].",
                         result.getStdout(), result.getStderr());
-                Path resultFile = mWorkDir.resolve(testCase.mId).resolve(TEST_RESULT_PATH);
+                Path resultFile = mOutputDir.resolve(testCase.mId).resolve(TEST_RESULT_PATH);
                 verifyTestResultFile(listener, testCase, resultFile.toFile());
                 break;
             case FAILED:
@@ -388,7 +416,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         command.add(testCase.mFile.getAbsolutePath());
         // Add output directory path
         command.add(OUTPUT_OPTION);
-        command.add(mWorkDir.resolve(testCase.mId).toString());
+        command.add(mOutputDir.resolve(testCase.mId).toString());
         // Add play mode
         command.add(MODE_OPTION);
         command.add(mPlayMode.name());
@@ -403,5 +431,80 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
             command.add(String.join(",", mGlobalVariables.get(testCase.mKey)));
         }
         return command.toArray(new String[] {});
+    }
+
+    /**
+     * Try to locate and parse an existing output file.
+     *
+     * @return listener containing the results or {@code null} if not found.
+     */
+    @Nullable
+    private CollectingTestListener parsePreviousResults() {
+        if (mPreviousResults == null) {
+            return null;
+        }
+        if (!mPreviousResults.isFile()) {
+            throw new IllegalArgumentException(
+                    String.format(
+                            "Previous results %s not found", mPreviousResults.getAbsolutePath()));
+        }
+
+        try {
+            TestRecordProto.TestRecord record = TestRecordProtoUtil.readFromFile(mPreviousResults);
+            return TestRecordInterpreter.interpreteRecord(record);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** Iterate over previous results to add them to the current run and exclude passed tests. */
+    private void loadPreviousResults(
+            ITestInvocationListener listener, CollectingTestListener results) {
+        results.getMergedTestRunResults().stream()
+                .filter(module -> MODULE_NAME.equals(module.getName()))
+                .findFirst()
+                .ifPresent(
+                        module -> {
+                            // Found a previous result for this module, replay it
+                            Map<TestDescription, TestResult> tests = module.getTestResults();
+                            listener.testRunStarted(MODULE_NAME, tests.size());
+                            tests.forEach(
+                                    (test, result) -> {
+                                        listener.testStarted(test, result.getStartTime());
+                                        if (result.getStatus() == TestStatus.FAILURE) {
+                                            listener.testFailed(test, result.getStackTrace());
+                                        } else {
+                                            // Only the PASSED and FAILURE test statuses are used,
+                                            // so exclude all non-FAILURE tests.
+                                            this.addExcludeFilter(test.toString());
+                                        }
+                                        listener.testEnded(test, result.getEndTime(), Map.of());
+                                    });
+                            listener.testRunEnded(module.getElapsedTime(), Map.of());
+                        });
+    }
+
+    /** Writes results to a uicd_results.pb file which can be used for file-based retries. */
+    @OptionClass(alias = "uicd")
+    public static class ResultReporter extends FileProtoResultReporter {
+
+        @Option(name = "output-path", description = "Output file path, can be used for retries")
+        private String mOutputPath = DEFAULT_OUTPUT_PATH;
+
+        private File mOutputFile;
+
+        @Override
+        public void processStartInvocation(
+                TestRecordProto.TestRecord record, IInvocationContext context) {
+            mOutputFile = new File(mOutputPath + ".tmp");
+            setFileOutput(mOutputFile);
+            super.processStartInvocation(record, context);
+        }
+
+        @Override
+        public void processFinalProto(TestRecordProto.TestRecord record) {
+            super.processFinalProto(record);
+            mOutputFile.renameTo(new File(mOutputPath));
+        }
     }
 }
