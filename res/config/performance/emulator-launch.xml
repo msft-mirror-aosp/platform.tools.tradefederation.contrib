@@ -17,26 +17,12 @@
 
     <option
         name="test-tag"
-        value="EmulatorMemoryCpuTest" />
+        value="EmulatorLaunchTest" />
 
     <option name="new-emulator" value="true" />
 
-    <object type="emulator_launch_preparer" class="com.android.tradefed.targetprep.LocalEmulatorLaunch" />
+    <object type="emulator_launcher" class="com.android.performance.tests.EmulatorStartupPerfTest$EmulatorLauncher" />
 
-    <test class="com.android.performance.tests.EmulatorInstrumentationPerfTest"/>
-
-    <object type="delegate_test" class="com.android.tradefed.testtype.AndroidJUnitTest" >
-        <option
-            name="window-animation"
-            value="false" />
-        <option
-            name="rerun"
-            value="false" />
-        <!-- disable timeout to stop having a separate thread per test method -->
-        <option
-            name="test-timeout"
-            value="0" />
-    </object>
-    <metrics_collector class="com.android.tradefed.device.metric.EmulatorMemoryCpuCollector" />
+    <test class="com.android.performance.tests.EmulatorStartupPerfTest"/>
 
 </configuration>
