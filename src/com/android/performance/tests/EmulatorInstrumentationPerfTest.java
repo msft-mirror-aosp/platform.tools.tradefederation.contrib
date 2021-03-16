@@ -35,7 +35,7 @@ import com.android.tradefed.testtype.IRemoteTest;
  *
  * <p>Intended to be paired with a metrics collector like EmulatorMemoryCpuCollector to measure
  */
-public class EmulatorRepeatedLaunchTest implements IRemoteTest, IConfigurationReceiver {
+public class EmulatorInstrumentationPerfTest implements IRemoteTest, IConfigurationReceiver {
     @Option(name = "iterations", description = "number of launch + run test iterations to perform")
     private int mIterations = 1;
 
