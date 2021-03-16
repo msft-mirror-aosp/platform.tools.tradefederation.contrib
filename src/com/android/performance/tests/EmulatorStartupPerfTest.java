@@ -27,23 +27,32 @@ import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.log.LogUtil;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.targetprep.BaseLocalEmulatorPreparer;
+import com.android.tradefed.testtype.IDeviceTest;
 import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.util.RunUtil;
 import com.android.tradefed.util.proto.TfMetricProtoUtil;
 
 import com.google.common.base.Preconditions;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.concurrent.Callable;
 
-/** A performance test that does repeated emulator launches and measures timingan. */
+/** A performance test that does repeated emulator launches and measures timings. */
 public class EmulatorStartupPerfTest implements IRemoteTest, IConfigurationReceiver {
     @Option(name = "iterations", description = "number of launch iterations to perform")
     private int mIterations = 1;
+
+    @Option(
+            name = "install-apk",
+            description = "path to instrumentation apk to install",
+            mandatory = true)
+    private File mInstallApk;
 
     private IConfiguration mConfig;
 
@@ -80,30 +89,65 @@ public class EmulatorStartupPerfTest implements IRemoteTest, IConfigurationRecei
         Preconditions.checkArgument(testInfo.getDevice().getIDevice().isEmulator());
         Preconditions.checkArgument(
                 testInfo.getDevice().getDeviceState() == TestDeviceState.NOT_AVAILABLE);
+        Preconditions.checkArgument(
+                mInstallApk.exists(), mInstallApk.getAbsolutePath() + " does not exist");
 
-        List<Long> onlineTimes = new ArrayList<>();
-        List<Long> bootTimes = new ArrayList<>();
+        Map<String, List<Long>> timingsMap = new HashMap<>();
+
+        // Pull the objects to perform the emulator launch
+        // They are stored in config in order to support receiving Options.
+        EmulatorLauncher emulatorLauncher =
+                (EmulatorLauncher) mConfig.getConfigurationObject("emulator_launcher");
+        IRemoteTest delegateTest = (IRemoteTest) mConfig.getConfigurationObject("delegate_test");
+        ((IDeviceTest) delegateTest).setDevice(testInfo.getDevice());
+
         for (int i = 1; i <= mIterations; i++) {
             LogUtil.CLog.i("Performing %d iteration of %d", i, mIterations);
 
             try {
-                // Pull the objects to perform the emulator launch
-                // They are stored in config in order to support receiving Options.
-                EmulatorLauncher emulatorLauncher =
-                        (EmulatorLauncher) mConfig.getConfigurationObject("emulator_launcher");
-
                 long startTimeMs = System.currentTimeMillis();
-                emulatorLauncher.launchEmulator(testInfo.getDevice());
-                testInfo.getDevice().waitForDeviceOnline(1 * 60 * 1000);
-                long onlineTime = System.currentTimeMillis();
-                waitForBootComplete(testInfo.getDevice(), onlineTime + 3 * 60 * 1000);
-                long bootTime = System.currentTimeMillis();
+                captureTime(
+                        timingsMap,
+                        "online_time",
+                        startTimeMs,
+                        () -> {
+                            emulatorLauncher.launchEmulator(testInfo.getDevice());
+                            testInfo.getDevice().waitForDeviceOnline(1 * 60 * 1000);
+                            return null;
+                        });
 
-                onlineTimes.add(onlineTime - startTimeMs);
-                bootTimes.add(bootTime - startTimeMs);
-                LogUtil.CLog.i(
-                        "Emulator online: %d ms, boot: %d ms",
-                        onlineTime - startTimeMs, bootTime - startTimeMs);
+                captureTime(
+                        timingsMap,
+                        "boot_time",
+                        startTimeMs,
+                        () -> {
+                            waitForBootComplete(testInfo.getDevice(), startTimeMs + 3 * 60 * 1000);
+                            return null;
+                        });
+
+                captureTime(
+                        timingsMap,
+                        "install_time",
+                        startTimeMs,
+                        () -> {
+                            // direcly install package instead of using ITestDevice.installPackage
+                            // to avoid
+                            // overhead of the expensive aapt parsing checks it does
+                            testInfo.getDevice()
+                                    .executeAdbCommand("install", mInstallApk.getAbsolutePath());
+                            return null;
+                        });
+
+                captureTime(
+                        timingsMap,
+                        "test_time",
+                        startTimeMs,
+                        () -> {
+                            delegateTest.run(testInfo, listener);
+                            return null;
+                        });
+
+                LogUtil.CLog.i("Metrics: %s", timingsMap);
 
                 // let devicemanager kill emulator for last iteration
                 if (i < mIterations) {
@@ -111,22 +155,34 @@ public class EmulatorStartupPerfTest implements IRemoteTest, IConfigurationRecei
                     testInfo.getDevice().waitForDeviceNotAvailable(10 * 1000);
                 }
 
-            } catch (IOException e) {
+            } catch (Exception e) {
                 LogUtil.CLog.e(e);
+                listener.invocationFailed(e);
             }
         }
 
-        reportMetrics(listener, onlineTimes, bootTimes);
+        reportMetrics(listener, timingsMap);
+    }
+
+    private void captureTime(
+            Map<String, List<Long>> timingsMap, String key, long startTimeMs, Callable<Void> action)
+            throws Exception {
+        action.call();
+        long measuredTime = System.currentTimeMillis() - startTimeMs;
+        List<Long> timesList = timingsMap.computeIfAbsent(key, k -> new ArrayList<>());
+        timesList.add(measuredTime);
     }
 
     private void reportMetrics(
-            ITestInvocationListener listener, List<Long> onlineTimes, List<Long> bootTimes) {
+            ITestInvocationListener listener, Map<String, List<Long>> timingsMap) {
         Map<String, String> metrics = new HashMap<>();
-        metrics.put("online_time", Long.toString(getMedian(onlineTimes)));
-        metrics.put("boot_time", Long.toString(getMedian(bootTimes)));
+        for (Map.Entry<String, List<Long>> entry : timingsMap.entrySet()) {
+            metrics.put(entry.getKey(), Long.toString(getMedian(entry.getValue())));
+        }
         LogUtil.CLog.i("About to report metrics: %s", metrics);
         listener.testRunStarted("emulator_launch", 0);
         listener.testRunEnded(0, TfMetricProtoUtil.upgradeConvert(metrics));
+
     }
 
     private static long getMedian(List<Long> items) {
@@ -144,7 +200,7 @@ public class EmulatorStartupPerfTest implements IRemoteTest, IConfigurationRecei
             if (result.trim().equals("1")) {
                 return;
             }
-            RunUtil.getDefault().sleep(100);
+            RunUtil.getDefault().sleep(50);
         }
     }
 }

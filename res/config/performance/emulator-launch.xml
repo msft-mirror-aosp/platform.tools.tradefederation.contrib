@@ -25,4 +25,17 @@
 
     <test class="com.android.performance.tests.EmulatorStartupPerfTest"/>
 
+    <object type="delegate_test" class="com.android.tradefed.testtype.AndroidJUnitTest" >
+        <option
+            name="window-animation"
+            value="false" />
+        <option
+            name="rerun"
+            value="false" />
+        <!-- disable timeout to stop having a separate thread per test method -->
+        <option
+            name="test-timeout"
+            value="0" />
+    </object>
+
 </configuration>
