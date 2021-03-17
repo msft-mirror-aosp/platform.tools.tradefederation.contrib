@@ -17,13 +17,13 @@
 
     <option
         name="test-tag"
-        value="EmulatorMemoryCpuTest" />
+        value="EmulatorLaunchTest" />
 
     <option name="new-emulator" value="true" />
 
-    <object type="emulator_launch_preparer" class="com.android.tradefed.targetprep.LocalEmulatorLaunch" />
+    <object type="emulator_launcher" class="com.android.performance.tests.EmulatorStartupPerfTest$EmulatorLauncher" />
 
-    <test class="com.android.performance.tests.EmulatorInstrumentationPerfTest"/>
+    <test class="com.android.performance.tests.EmulatorStartupPerfTest"/>
 
     <object type="delegate_test" class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option
@@ -37,6 +37,5 @@
             name="test-timeout"
             value="0" />
     </object>
-    <metrics_collector class="com.android.tradefed.device.metric.EmulatorMemoryCpuCollector" />
 
 </configuration>
