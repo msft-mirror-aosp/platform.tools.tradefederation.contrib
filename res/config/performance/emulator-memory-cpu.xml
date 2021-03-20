@@ -21,9 +21,12 @@
 
     <option name="new-emulator" value="true" />
 
-    <object type="emulator_launch_preparer" class="com.android.tradefed.targetprep.LocalEmulatorLaunch" />
+    <object type="emulator_launcher" class="com.android.tradefed.targetprep.LocalEmulatorLaunch" />
 
-    <test class="com.android.performance.tests.EmulatorInstrumentationPerfTest"/>
+    <test class="com.android.performance.tests.EmulatorInstrumentationPerfTest">
+        <option name="test-apk-name" value="CtsFragmentTestCases.apk" />
+        <option name="emulator-metrics-key" value="emulator_memory_cpu" />
+    </test>
 
     <object type="delegate_test" class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option
@@ -36,7 +39,9 @@
         <option
             name="test-timeout"
             value="0" />
+        <option
+            name="runner"
+            value="androidx.test.runner.AndroidJUnitRunner" />
     </object>
-    <metrics_collector class="com.android.tradefed.device.metric.EmulatorMemoryCpuCollector" />
 
 </configuration>
