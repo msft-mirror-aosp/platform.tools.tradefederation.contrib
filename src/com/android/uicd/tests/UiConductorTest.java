@@ -496,7 +496,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         @Override
         public void processStartInvocation(
                 TestRecordProto.TestRecord record, IInvocationContext context) {
-            mOutputFile = new File(mOutputPath + ".tmp");
+            mOutputFile = new File(mOutputPath + ".tmp").getAbsoluteFile();
             setFileOutput(mOutputFile);
             super.processStartInvocation(record, context);
         }
