@@ -32,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -60,6 +61,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -204,19 +206,28 @@ public class UiConductorTestTest {
 
     @Test
     public void testRun_testDirectory() throws Exception {
-        // Create directory with two test files (test1.json, nested_dir/test2.json)
+        // Create directory with four test files (test[1-3].json, nested_dir/test.json)
         Path testDir = mInputDir.resolve("test_dir");
         Files.createDirectories(testDir.resolve("nested_dir"));
         Files.createFile(testDir.resolve("test1.json"));
-        Files.createFile(testDir.resolve("nested_dir/test2.json"));
+        Files.createFile(testDir.resolve("test2.json"));
+        Files.createFile(testDir.resolve("test3.json"));
+        Files.createFile(testDir.resolve("nested_dir/test.json"));
         mOptionSetter.setOptionValue("uicd-test", TEST_KEY, testDir.toString());
-        // Three tests executed (including test.json) and their name includes the relative path
+
+        // Five tests executed (including test.json)
         mTest.run(mTestInfo, mListener);
-        verify(mListener, times(3)).testStarted(any(), anyLong());
+        verify(mListener, times(5)).testStarted(any(), anyLong());
+        // Tests are executed in alphabetical order and their name includes the relative path
+        InOrder order = inOrder(mListener);
+        TestDescription nested = new TestDescription(MODULE_NAME, "test_dir/nested_dir/test.json");
+        order.verify(mListener).testStarted(eq(nested), anyLong());
         TestDescription test1 = new TestDescription(MODULE_NAME, "test_dir/test1.json");
-        verify(mListener).testStarted(eq(test1), anyLong());
-        TestDescription test2 = new TestDescription(MODULE_NAME, "test_dir/nested_dir/test2.json");
-        verify(mListener).testStarted(eq(test2), anyLong());
+        order.verify(mListener).testStarted(eq(test1), anyLong());
+        TestDescription test2 = new TestDescription(MODULE_NAME, "test_dir/test2.json");
+        order.verify(mListener).testStarted(eq(test2), anyLong());
+        TestDescription test3 = new TestDescription(MODULE_NAME, "test_dir/test3.json");
+        order.verify(mListener).testStarted(eq(test3), anyLong());
     }
 
     @Test

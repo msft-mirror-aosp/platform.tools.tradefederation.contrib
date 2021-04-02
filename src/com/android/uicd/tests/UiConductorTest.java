@@ -391,6 +391,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
                 Path dirPath = file.toPath().toAbsolutePath();
                 return Files.walk(dirPath)
                         .filter(Files::isRegularFile)
+                        .sorted()
                         .map(
                                 filePath -> {
                                     String id = dirPath.getParent().relativize(filePath).toString();
