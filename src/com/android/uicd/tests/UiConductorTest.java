@@ -391,6 +391,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
                 Path dirPath = file.toPath().toAbsolutePath();
                 return Files.walk(dirPath)
                         .filter(Files::isRegularFile)
+                        .sorted()
                         .map(
                                 filePath -> {
                                     String id = dirPath.getParent().relativize(filePath).toString();
@@ -496,7 +497,7 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         @Override
         public void processStartInvocation(
                 TestRecordProto.TestRecord record, IInvocationContext context) {
-            mOutputFile = new File(mOutputPath + ".tmp");
+            mOutputFile = new File(mOutputPath + ".tmp").getAbsoluteFile();
             setFileOutput(mOutputFile);
             super.processStartInvocation(record, context);
         }
