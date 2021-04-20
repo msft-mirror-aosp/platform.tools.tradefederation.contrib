@@ -23,7 +23,10 @@
 
     <object type="emulator_launcher" class="com.android.performance.tests.EmulatorStartupPerfTest$EmulatorLauncher" />
 
-    <test class="com.android.performance.tests.EmulatorStartupPerfTest"/>
+    <test class="com.android.performance.tests.EmulatorStartupPerfTest">
+        <option name="test-apk-name" value="HelloWorldTests.apk" />
+        <option name="emulator-metrics-key" value="emulator_launch" />
+    </test>
 
     <object type="delegate_test" class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option
@@ -36,6 +39,9 @@
         <option
             name="test-timeout"
             value="0" />
+        <option
+            name="runner"
+            value="androidx.test.runner.AndroidJUnitRunner" />
     </object>
 
 </configuration>
