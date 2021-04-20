@@ -16,66 +16,40 @@
 
 package com.android.performance.tests;
 
-import com.android.ddmlib.Log;
-import com.android.tradefed.config.IConfiguration;
-import com.android.tradefed.config.IConfigurationReceiver;
-import com.android.tradefed.config.Option;
-import com.android.tradefed.device.DeviceNotAvailableException;
+import com.android.tradefed.device.metric.EmulatorMemoryCpuCapturer;
 import com.android.tradefed.invoker.TestInformation;
-import com.android.tradefed.log.LogUtil;
 import com.android.tradefed.result.ITestInvocationListener;
-import com.android.tradefed.targetprep.BuildError;
-import com.android.tradefed.targetprep.ITargetPreparer;
-import com.android.tradefed.targetprep.TargetSetupError;
-import com.android.tradefed.testtype.IDeviceTest;
-import com.android.tradefed.testtype.IRemoteTest;
+import com.android.tradefed.targetprep.BaseEmulatorPreparer;
+import com.android.tradefed.testtype.AndroidJUnitTest;
+
+import java.nio.file.Path;
 
 /**
  * A performance test that does repeated emulator launch + run instrumentation test.
  *
  * <p>Intended to be paired with a metrics collector like EmulatorMemoryCpuCollector to measure
  */
-public class EmulatorInstrumentationPerfTest implements IRemoteTest, IConfigurationReceiver {
-    @Option(name = "iterations", description = "number of launch + run test iterations to perform")
-    private int mIterations = 1;
-
-    private IConfiguration mConfig;
-
+public class EmulatorInstrumentationPerfTest extends BaseEmulatorPerfTest {
     @Override
-    public void setConfiguration(IConfiguration configuration) {
-        mConfig = configuration;
-    }
+    protected void performIteration(
+            TestInformation testInfo,
+            BaseEmulatorPreparer emulatorLauncher,
+            AndroidJUnitTest delegateTest,
+            Path apkPath,
+            DataRecorder dataRecorder,
+            ITestInvocationListener listener)
+            throws Exception {
+        emulatorLauncher.setUp(testInfo);
 
-    @Override
-    public void run(TestInformation testInfo, ITestInvocationListener listener)
-            throws DeviceNotAvailableException {
-        for (int i = 1; i <= mIterations; i++) {
-            LogUtil.CLog.logAndDisplay(
-                    Log.LogLevel.INFO, "Performing %d iteration of %d", i, mIterations);
+        EmulatorMemoryCpuCapturer capturer = new EmulatorMemoryCpuCapturer(testInfo.getDevice());
+        dataRecorder.recordMetric("initial_memory_pss", capturer.getPssMemory());
+        dataRecorder.recordMetric("initial_cpu_usage", capturer.getCpuUsage());
 
-            try {
-                // Pull the objects to perform the emulator launch and the actual instrumentation
-                // out of the config
-                // They are stored in config in order to support receiving Options.
-                ITargetPreparer emulatorLaunchPreparer =
-                        (ITargetPreparer)
-                                mConfig.getConfigurationObject("emulator_launch_preparer");
-                IRemoteTest instrumentationRemoteTest =
-                        (IRemoteTest) mConfig.getConfigurationObject("delegate_test");
-                emulatorLaunchPreparer.setUp(testInfo);
-                ((IDeviceTest) instrumentationRemoteTest).setDevice(testInfo.getDevice());
-                instrumentationRemoteTest.run(testInfo, listener);
+        delegateTest.setDevice(testInfo.getDevice());
+        testInfo.getDevice().installPackage(apkPath.toFile(), true);
+        delegateTest.run(testInfo, listener);
 
-                // don't kill the device on the last iteration, as tradefed will insist on doing
-                // this
-                if (i < mIterations) {
-                    testInfo.getDevice().executeAdbCommand("emu", "kill");
-
-                    testInfo.getDevice().waitForDeviceNotAvailable(10 * 1000);
-                }
-            } catch (TargetSetupError | BuildError e) {
-                LogUtil.CLog.e(e);
-            }
-        }
+        dataRecorder.recordMetric("end_memory_pss", capturer.getPssMemory());
+        dataRecorder.recordMetric("overall_cpu_usage", capturer.getCpuUsage());
     }
 }
