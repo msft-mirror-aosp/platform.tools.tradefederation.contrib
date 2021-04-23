@@ -298,7 +298,7 @@ public class UiConductorTestTest {
         testCase.setStatus(TestRecordProto.TestStatus.PASS);
         // Create module record
         TestRecordProto.TestRecord.Builder module = TestRecordProto.TestRecord.newBuilder();
-        module.setTestRecordId("UiConductorTest");
+        module.setTestRecordId("UiConductorTest#test.json");
         module.addChildrenBuilder().setInlineTestRecord(testCase);
         // Write records to results file
         TestRecordProto.TestRecord.Builder record = TestRecordProto.TestRecord.newBuilder();
