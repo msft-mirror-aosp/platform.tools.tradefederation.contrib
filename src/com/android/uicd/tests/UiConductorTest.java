@@ -232,16 +232,17 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
         mOutputDir = mWorkDir.toPath().resolve("output");
 
         // Execute test cases
-        long runStartTime = System.currentTimeMillis();
-        listener.testRunStarted(MODULE_NAME, testCases.size());
         for (UiConductorTestCase testCase : testCases) {
             if (!shouldRunTestCase(testCase)) {
                 CLog.d("Skipping %s", testCase.mDesc);
                 continue;
             }
+            // TODO(b/186141354): Revert to one module once ATS supports detailed proto results
+            long runStartTime = System.currentTimeMillis();
+            listener.testRunStarted(testCase.mDesc.toString(), 1);
             runTestCase(listener, testCase, testInfo.getDevices());
+            listener.testRunEnded(System.currentTimeMillis() - runStartTime, Map.of());
         }
-        listener.testRunEnded(System.currentTimeMillis() - runStartTime, Map.of());
     }
 
     /** @return {@link IRunUtil} instance to use */
@@ -462,13 +463,12 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
     private void loadPreviousResults(
             ITestInvocationListener listener, CollectingTestListener results) {
         results.getMergedTestRunResults().stream()
-                .filter(module -> MODULE_NAME.equals(module.getName()))
-                .findFirst()
-                .ifPresent(
+                .filter(module -> module.getName().startsWith(MODULE_NAME + '#'))
+                .forEach(
                         module -> {
                             // Found a previous result for this module, replay it
                             Map<TestDescription, TestResult> tests = module.getTestResults();
-                            listener.testRunStarted(MODULE_NAME, tests.size());
+                            listener.testRunStarted(module.getName(), tests.size());
                             tests.forEach(
                                     (test, result) -> {
                                         listener.testStarted(test, result.getStartTime());
