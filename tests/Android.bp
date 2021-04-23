@@ -16,24 +16,25 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-tradefed_java_library_host {
+java_test_host {
     name: "tf-contrib-tests",
 
     // Only compile source java files in this lib.
     srcs: ["src/**/*.java"],
-
-    //resource_dirs: ["res"],
 
     javacflags: [
         "-g",
         "-Xlint",
     ],
 
-    libs: [
+    static_libs: [
         "tradefed",
         "tradefed-contrib",
         "easymock",
         "mockito",
         "objenesis",
     ],
+    test_options: {
+        unit_test: true,
+    },
 }
