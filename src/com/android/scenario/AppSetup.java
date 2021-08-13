@@ -30,6 +30,9 @@ import java.util.List;
 /** A test that runs app setup scenarios only. */
 @OptionClass(alias = "app-setup")
 public class AppSetup extends AndroidJUnitTest {
+    @VisibleForTesting
+    static final String DEFAULT_SCENARIOS_PACKAGE = "android.platform.test.scenario";
+
     @Option(
         name = "drop-cache-when-finished",
         description = "Clear the cache when setup is finished."
@@ -53,8 +56,6 @@ public class AppSetup extends AndroidJUnitTest {
 
     public AppSetup() {
         super();
-        // Specifically target the app setup scenarios.
-        setPackageName("android.platform.test.scenario");
         addIncludeAnnotation("android.platform.test.scenario.annotation.AppSetup");
     }
 
@@ -64,6 +65,11 @@ public class AppSetup extends AndroidJUnitTest {
     @Override
     public void run(TestInformation testInfo, final ITestInvocationListener listener)
             throws DeviceNotAvailableException {
+        if (getPackageName() == null) {
+            // Specifically target the app setup scenarios unless otherwise specified.
+            setPackageName(DEFAULT_SCENARIOS_PACKAGE);
+        }
+
         if(mDisable) {
             return;
         }
