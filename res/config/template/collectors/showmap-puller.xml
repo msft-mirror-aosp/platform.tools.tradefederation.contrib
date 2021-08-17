@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2018 The Android Open Source Project
+<!-- Copyright (C) 2021 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
      limitations under the License.
 -->
 <configuration description="Pull the files from the device and add it to the test logs." >
-    <!-- Pulls the perfetto files from the device and collects the metrics from the trace files -->
-    <metrics_collector class="com.android.tradefed.device.metric.PerfettoPullerMetricCollector">
-        <option name="collect-on-run-ended-only" value="false" />
-    </metrics_collector>
+    <!-- Pulls the showmap file from the device and computes granular metrics from the file -->
+    <metrics_collector class="com.android.tradefed.device.metric.ShowmapPullerMetricCollector" />
 </configuration>
