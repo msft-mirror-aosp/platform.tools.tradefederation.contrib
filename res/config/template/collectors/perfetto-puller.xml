@@ -15,5 +15,7 @@
 -->
 <configuration description="Pull the files from the device and add it to the test logs." >
     <!-- Pulls the perfetto files from the device and collects the metrics from the trace files -->
-    <metrics_collector class="com.android.tradefed.device.metric.PerfettoPullerMetricCollector" />
+    <metrics_collector class="com.android.tradefed.device.metric.PerfettoPullerMetricCollector">
+        <option name="collect-on-run-ended-only" value="false" />
+    </metrics_collector>
 </configuration>
