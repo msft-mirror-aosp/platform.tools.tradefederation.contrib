@@ -19,6 +19,7 @@ package com.android.media.tests;
 import com.android.tradefed.log.LogUtil;
 import com.android.tradefed.metrics.proto.MetricMeasurement;
 import com.android.tradefed.result.CollectingTestListener;
+import com.android.tradefed.result.FailureDescription;
 import com.android.tradefed.result.FileInputStreamSource;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.result.InputStreamSource;
@@ -89,6 +90,12 @@ protected static abstract class AbstractCameraTestMetricsCollectionListener exte
         super.testRunFailed(errorMessage);
         mFatalErrors.put(mCameraTestBase.getRuKey(), errorMessage);
     }
+
+        @Override
+        public void testRunFailed(FailureDescription failure) {
+            super.testRunFailed(failure);
+            mFatalErrors.put(mCameraTestBase.getRuKey(), failure.getErrorMessage());
+        }
 
     @Override
     public void testRunEnded(
