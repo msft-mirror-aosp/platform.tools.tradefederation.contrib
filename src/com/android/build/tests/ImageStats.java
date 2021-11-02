@@ -27,6 +27,7 @@ import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.result.TestDescription;
 import com.android.tradefed.testtype.IBuildReceiver;
 import com.android.tradefed.testtype.IRemoteTest;
+import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.proto.TfMetricProtoUtil;
 
 import java.io.BufferedReader;
@@ -38,6 +39,7 @@ import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -64,7 +66,7 @@ public class ImageStats implements IRemoteTest, IBuildReceiver {
                             + "download it), otherwise it refers to a local file, typically used for debugging "
                             + "purposes",
             mandatory = true)
-    private String mStatsFileName = null;
+    private Set<String> mStatsFileNames = new HashSet<>();
 
     @Option(
             name = "file-from-build-info",
@@ -109,31 +111,31 @@ public class ImageStats implements IRemoteTest, IBuildReceiver {
     @Override
     public void run(ITestInvocationListener listener) throws DeviceNotAvailableException {
         File statsFile;
-        if (mFileFromBuildInfo) {
-            statsFile = mBuildInfo.getFile(mStatsFileName);
-        } else {
-            statsFile = new File(mStatsFileName);
-        }
-        long start = System.currentTimeMillis();
-        Map<String, String> fileSizes = null;
         // fixed run name, 1 test to run
-        listener.testRunStarted("image-stats", 1);
-        if (statsFile == null || !statsFile.exists()) {
-            throw new RuntimeException(
-                    "Invalid image stats file (<null>) specified or it does not exist.");
-        } else {
-            TestDescription td = new TestDescription(ImageStats.class.getName(), FILE_SIZES);
+        long start = System.currentTimeMillis();
+        listener.testRunStarted("image-stats-run", 1);
+        for (String statsFileName : mStatsFileNames) {
+            if (mFileFromBuildInfo) {
+                statsFile = mBuildInfo.getFile(statsFileName);
+            } else {
+                statsFile = new File(statsFileName);
+            }
+            Map<String, String> finalFileSizeMetrics = new HashMap<>();
+            if (statsFile == null || !statsFile.exists()) {
+                throw new RuntimeException(
+                        "Invalid image stats file (<null>) specified or it does not exist.");
+            }
+            // Use stats file name to uniquely identify the test and post only the metrics
+            // collected from that file under the test.
+            TestDescription td = new TestDescription(FileUtil.getBaseName(statsFileName),
+                    FILE_SIZES);
             listener.testStarted(td);
             try (InputStream in = new FileInputStream(statsFile)) {
-                fileSizes =
-                        performAggregation(
-                                parseFileSizes(in),
-                                processAggregationPatterns(mAggregationPattern));
+                parseFinalMetrics(in, finalFileSizeMetrics);
             } catch (IOException ioe) {
-                String message =
-                        String.format(
-                                "Failed to parse image stats file: %s",
-                                statsFile.getAbsolutePath());
+                String message = String.format(
+                        "Failed to parse image stats file: %s",
+                        statsFile.getAbsolutePath());
                 CLog.e(message);
                 CLog.e(ioe);
                 listener.testFailed(td, ioe.toString());
@@ -143,16 +145,36 @@ public class ImageStats implements IRemoteTest, IBuildReceiver {
                         System.currentTimeMillis() - start, new HashMap<String, Metric>());
                 throw new RuntimeException(message, ioe);
             }
-            String logOutput = String.format("File sizes: %s", fileSizes.toString());
+            String logOutput = String.format("File sizes: %s", finalFileSizeMetrics.toString());
             if (mFileFromBuildInfo) {
                 CLog.v(logOutput);
             } else {
                 // assume local debug, print outloud
                 CLog.logAndDisplay(Log.LogLevel.VERBOSE, logOutput);
             }
-            listener.testEnded(td, TfMetricProtoUtil.upgradeConvert(fileSizes));
+            listener.testEnded(td, TfMetricProtoUtil.upgradeConvert(finalFileSizeMetrics));
+
         }
         listener.testRunEnded(System.currentTimeMillis() - start, new HashMap<String, Metric>());
+    }
+
+    /**
+     * Parse the aggregated metrics that matches the patterns and all individual file size metrics.
+     *
+     * @param in an unread {@link InputStream} for the content of the file sizes; the stream will be
+     *     fully read after executing the method
+     * @param finalFileSizeMetrics final map that will have all the metrics of aggregated and
+     *     individual file names and their corresponding values.
+     * @throws IOException
+     */
+    protected void parseFinalMetrics(InputStream in,
+            Map<String, String> finalFileSizeMetrics) throws IOException {
+        Map<String, Long> individualFileSizes = parseFileSizes(in);
+        // Add aggregated metrics.
+        finalFileSizeMetrics.putAll(performAggregation(individualFileSizes,
+                processAggregationPatterns(mAggregationPattern)));
+        // Add individual file size metrics.
+        finalFileSizeMetrics.putAll(convertMestricsToString(individualFileSizes));
     }
 
     /**
@@ -303,5 +325,20 @@ public class ImageStats implements IRemoteTest, IBuildReceiver {
         ret.put(LABEL_TOTAL, Long.toString(total));
         ret.put(LABEL_CATEGORIZED, Long.toString(total - uncategorized));
         return ret;
+    }
+
+    /**
+     * Convert the metric type to String which is compatible for posting the results.
+     *
+     * @param allIndividualFileSizeMetrics
+     * @return
+     */
+    private Map<String, String> convertMestricsToString(
+            Map<String, Long> allIndividualFileSizeMetrics) {
+        Map<String, String> compatibleMetrics = new HashMap<>();
+        for (Entry<String, Long> fileSizeEntry : allIndividualFileSizeMetrics.entrySet()) {
+            compatibleMetrics.put(fileSizeEntry.getKey(), String.valueOf(fileSizeEntry.getValue()));
+        }
+        return compatibleMetrics;
     }
 }
