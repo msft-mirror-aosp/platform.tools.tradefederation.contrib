@@ -44,6 +44,9 @@ public class ImageStatsTest {
                     + "      500380  /system/fonts/NotoSansCuneiform-Regular.ttf\n"
                     + "      126391  /system/framework/core-oj.jar\n"
                     + "      122641  /system/framework/com.quicinc.cne.jar\n";
+    private static final String TEST_DATA_SMALL =
+            "   164424453  /system/app/WallpapersBReel2017/WallpapersBReel2017.apk\n"
+                    + "   124082279  /system/app/Chrome/Chrome.apk\n";
     private static final Map<String, Long> PARSED_TEST_DATA = new HashMap<>();
 
     static {
@@ -146,5 +149,34 @@ public class ImageStatsTest {
                 "failed to verify aggregated size for category 'total'",
                 "385519430",
                 ret.get("total"));
+    }
+
+    /** Verifies all the individual file size metrics are added as expected.*/
+    @Test
+    public void testParseFinalMetrics() throws Exception {
+        Map<String, String> finalMetrics = new HashMap<>();
+        mImageStats.parseFinalMetrics(new ByteArrayInputStream(TEST_DATA_SMALL.getBytes()),
+                finalMetrics);
+        Assert.assertEquals("Total number of metrics is not as expected", 5, finalMetrics.size());
+        Assert.assertEquals(
+                "Failed to get WallpapersBReel2017.apk file metris.",
+                "164424453",
+                finalMetrics.get("/system/app/WallpapersBReel2017/WallpapersBReel2017.apk"));
+        Assert.assertEquals(
+                "Failed to get Chrome.apk file metris'",
+                "124082279",
+                finalMetrics.get("/system/app/Chrome/Chrome.apk"));
+        Assert.assertEquals(
+                "failed to verify aggregated size for category 'categorized'",
+                "0",
+                finalMetrics.get("categorized"));
+        Assert.assertEquals(
+                "failed to verify aggregated size for category 'uncategorized'",
+                "288506732",
+                finalMetrics.get("uncategorized"));
+        Assert.assertEquals(
+                "failed to verify aggregated size for category 'total'",
+                "288506732",
+                finalMetrics.get("total"));
     }
 }
