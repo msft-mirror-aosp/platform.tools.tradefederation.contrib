@@ -41,6 +41,7 @@ import javax.xml.parsers.SAXParserFactory;
 public class MetricsXmlParser {
 
     /** Thrown when MetricsXmlParser fails to parse a metrics xml file. */
+    @SuppressWarnings("serial")
     public static class ParseException extends Exception {
         public ParseException(Throwable cause) {
             super(cause);
