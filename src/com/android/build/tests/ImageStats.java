@@ -30,12 +30,12 @@ import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.util.FileUtil;
 import com.android.tradefed.util.proto.TfMetricProtoUtil;
 
-import java.io.BufferedReader;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -130,8 +130,8 @@ public class ImageStats implements IRemoteTest, IBuildReceiver {
             TestDescription td = new TestDescription(FileUtil.getBaseName(statsFileName),
                     FILE_SIZES);
             listener.testStarted(td);
-            try (InputStream in = new FileInputStream(statsFile)) {
-                parseFinalMetrics(in, finalFileSizeMetrics);
+            try {
+                parseFinalMetrics(statsFile, finalFileSizeMetrics);
             } catch (IOException ioe) {
                 String message = String.format(
                         "Failed to parse image stats file: %s",
@@ -161,15 +161,15 @@ public class ImageStats implements IRemoteTest, IBuildReceiver {
     /**
      * Parse the aggregated metrics that matches the patterns and all individual file size metrics.
      *
-     * @param in an unread {@link InputStream} for the content of the file sizes; the stream will be
-     *     fully read after executing the method
+     * @param statsFile {@link File} which contains the file name and the corresponding size
+     *  details.
      * @param finalFileSizeMetrics final map that will have all the metrics of aggregated and
      *     individual file names and their corresponding values.
      * @throws IOException
      */
-    protected void parseFinalMetrics(InputStream in,
+    protected void parseFinalMetrics(File statsFile,
             Map<String, String> finalFileSizeMetrics) throws IOException {
-        Map<String, Long> individualFileSizes = parseFileSizes(in);
+        Map<String, Long> individualFileSizes = parseFileSizes(statsFile);
         // Add aggregated metrics.
         finalFileSizeMetrics.putAll(performAggregation(individualFileSizes,
                 processAggregationPatterns(mAggregationPattern)));
@@ -178,35 +178,25 @@ public class ImageStats implements IRemoteTest, IBuildReceiver {
     }
 
     /**
-     * Processes text files like 'installed-files.txt' (as built by standard Android build rules for
-     * device targets) into a map of file path to file sizes
+     * Processes json files like 'installed-files.json' (as built by standard Android build rules
+     * for device targets) into a map of file path to file sizes
      *
-     * @param in an unread {@link InputStream} for the content of the file sizes; the stream will be
-     *     fully read after executing the method
+     * @param statsFile {@link File} which contains the file name and the corresponding size
+     *  details.
      * @return
      */
-    protected Map<String, Long> parseFileSizes(InputStream in) throws IOException {
+    protected Map<String, Long> parseFileSizes(File statsFile) throws IOException {
         Map<String, Long> ret = new HashMap<>();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                // trim both ends of the raw line and make a split by whitespaces
-                // e.g. trying to match a line like this:
-                //     96992106  /system/app/Chrome/Chrome.apk
-                String[] fields = line.trim().split("\\s+");
-                if (fields.length != 2) {
-                    CLog.w("Unable to split line to file size and name: %s", line);
-                    continue;
-                }
-                long size = 0;
-                try {
-                    size = Long.parseLong(fields[0]);
-                } catch (NumberFormatException nfe) {
-                    CLog.w("Failed to parse file size from field '%s', ignored", fields[0]);
-                    continue;
-                }
-                ret.put(fields[1], size);
+        try {
+            JSONArray jsonArray = new JSONArray(FileUtil.readStringFromFile(statsFile));
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                String fileName = jsonObject.getString("Name");
+                Long fileSize = Long.parseLong(jsonObject.getString("Size"));
+                ret.put(fileName, fileSize);
             }
+        } catch (JSONException e) {
+            CLog.w("JSONException: %s", e.getMessage());
         }
         return ret;
     }
