@@ -306,7 +306,7 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
 
         try {
             runMonkey(listener);
-        } catch (Exception e) {
+        } catch (Exception | AssertionError e) {
             listener.testRunFailed(FailureDescription.create(e.getMessage()));
         } finally {
             listener.testEnded(id, new HashMap<String, Metric>());
