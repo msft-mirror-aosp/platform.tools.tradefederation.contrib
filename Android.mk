@@ -18,13 +18,13 @@ COMPATIBILITY.tradefed_tests_dir := \
 
 # makefile rules to copy jars to HOST_OUT/tradefed
 # so tradefed.sh can automatically add to classpath
-DEST_JAR := $(HOST_OUT)/tradefed/tradefed-contrib.jar
-BUILT_JAR := $(call intermediates-dir-for,JAVA_LIBRARIES,tradefed-contrib,HOST)/javalib.jar
-$(DEST_JAR): $(BUILT_JAR)
-	$(copy-file-to-new-target)
+#DEST_JAR := $(HOST_OUT)/tradefed/tradefed-contrib.jar
+#BUILT_JAR := $(call intermediates-dir-for,JAVA_LIBRARIES,tradefed-contrib,HOST)/javalib.jar
+#$(DEST_JAR): $(BUILT_JAR)
+#	$(copy-file-to-new-target)
 
 # this dependency ensure the above rule will be executed if jar is built
-$(HOST_OUT_JAVA_LIBRARIES)/tradefed-contrib.jar : $(DEST_JAR)
+#$(HOST_OUT_JAVA_LIBRARIES)/tradefed-contrib.jar : $(DEST_JAR)
 
 # Build all sub-directories
 include $(call all-makefiles-under,$(LOCAL_PATH))
