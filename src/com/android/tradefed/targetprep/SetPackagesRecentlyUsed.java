@@ -52,6 +52,9 @@ public class SetPackagesRecentlyUsed extends BaseTargetPreparer {
     @Override
     public void setUp(TestInformation testInfo)
             throws TargetSetupError, BuildError, DeviceNotAvailableException {
+        // Need to set this prop to ensure that postinstall dex2opt scripts run
+        // successfully
+        testInfo.getDevice().executeShellCommand("setprop persist.pm.mock-upgrade true");
         long deviceTimeMillis = testInfo.getDevice().getDeviceDate();
         long deviceRecentMillis = deviceTimeMillis - mRecentTimeMillis;
         StringBuilder builder = new StringBuilder();
