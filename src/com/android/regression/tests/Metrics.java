@@ -31,6 +31,7 @@ public class Metrics {
     private final MultiMap<Pair<TestDescription, String>, Double> mTestMetrics = new MultiMap<>();
 
     /** Throw when metrics validation fails in strict mode. */
+    @SuppressWarnings("serial")
     public static class MetricsException extends RuntimeException {
         MetricsException(String cause) {
             super(cause);
