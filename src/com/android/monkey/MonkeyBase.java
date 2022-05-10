@@ -34,6 +34,7 @@ import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
 import com.android.tradefed.result.ByteArrayInputStreamSource;
 import com.android.tradefed.result.DeviceFileReporter;
+import com.android.tradefed.result.FailureDescription;
 import com.android.tradefed.result.FileInputStreamSource;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.result.InputStreamSource;
@@ -84,8 +85,8 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
      * started it from the app's launcher icon
      */
     private static final String LAUNCH_APP_CMD =
-            "am start -W -n '%s' "
-                    + "-a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10200000";
+            "am start -W -n '%s' -a android.intent.action.MAIN -c android.intent.category.LAUNCHER"
+                    + " -f 0x10200000";
 
     private static final String NULL_UPTIME = "0.00";
 
@@ -157,15 +158,15 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
     @Option(
             name = "launch-extras-int",
             description =
-                    "Launch int extras. May be repeated. "
-                            + "Format: --launch-extras-i key value. Note: this will be applied to all components.")
+                    "Launch int extras. May be repeated. Format: --launch-extras-i key value."
+                            + " Note: this will be applied to all components.")
     private Map<String, Integer> mIntegerExtras = new HashMap<>();
 
     @Option(
             name = "launch-extras-str",
             description =
-                    "Launch string extras. May be repeated. "
-                            + "Format: --launch-extras-s key value. Note: this will be applied to all components.")
+                    "Launch string extras. May be repeated. Format: --launch-extras-s key value."
+                            + " Note: this will be applied to all components.")
     private Map<String, String> mStringExtras = new HashMap<>();
 
     @Option(
@@ -226,9 +227,9 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
     @Option(
             name = "warmup-component",
             description =
-                    "Component name of app to launch for "
-                            + "\"warming up\" before monkey test, will be used in an intent together with standard "
-                            + "flags and parameters as launched from Launcher. May be repeated")
+                    "Component name of app to launch for \"warming up\" before monkey test, will"
+                            + " be used in an intent together with standard flags and parameters as"
+                            + " launched from Launcher. May be repeated")
     private List<String> mLaunchComponents = new ArrayList<>();
 
     /** @deprecated b/139751666 */
@@ -305,6 +306,8 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
 
         try {
             runMonkey(listener);
+        } catch (Exception | AssertionError e) {
+            listener.testRunFailed(FailureDescription.create(e.getMessage()));
         } finally {
             listener.testEnded(id, new HashMap<String, Metric>());
             listener.testRunEnded(

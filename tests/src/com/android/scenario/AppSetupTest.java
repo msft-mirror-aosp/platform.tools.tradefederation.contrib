@@ -15,7 +15,9 @@
  */
 package com.android.scenario;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
@@ -95,5 +97,34 @@ public class AppSetupTest {
         mOptionSetter.setOptionValue("disable", String.valueOf(true));
         mAppSetup.run(mTestInfo, mListener);
         verify(mAppSetup, times(0)).runTest(any(), any());
+    }
+
+    /** Test that we run the default scenario package if not otherwise specified. */
+    @Test
+    public void testDefaultsToUsingScenariosPackage() throws Exception {
+        doAnswer(
+                        invocation -> {
+                            assertEquals(
+                                    mAppSetup.getPackageName(), AppSetup.DEFAULT_SCENARIOS_PACKAGE);
+                            return null;
+                        })
+                .when(mAppSetup)
+                .runTest(any(), any());
+        mAppSetup.run(mTestInfo, mListener);
+    }
+
+    /** Test that an explicitly specified package name is not overridden. */
+    @Test
+    public void testSupportsExplicitPackageName() throws Exception {
+        String packageName = "another." + AppSetup.DEFAULT_SCENARIOS_PACKAGE;
+        mOptionSetter.setOptionValue("package", packageName);
+        doAnswer(
+                        invocation -> {
+                            assertEquals(mAppSetup.getPackageName(), packageName);
+                            return null;
+                        })
+                .when(mAppSetup)
+                .runTest(any(), any());
+        mAppSetup.run(mTestInfo, mListener);
     }
 }
