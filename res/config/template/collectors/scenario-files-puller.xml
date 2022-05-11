@@ -15,10 +15,10 @@
 -->
 <configuration description="Pull the files from the device, process it and add it to the logs." >
     <include name="template/collectors/file-puller" />
-    <include name="template/collectors/incident-puller" />
     <include name="template/collectors/perfetto-puller" />
     <include name="template/collectors/reboot-reason-collector" />
     <include name="template/collectors/runtime-restart-collector" />
     <include name="template/collectors/host-statsd-collector" />
+    <include name="template/collectors/showmap-puller" />
 </configuration>
 
