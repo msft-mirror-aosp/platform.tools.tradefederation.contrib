@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.android.regression.tests.MetricsXmlParser.ParseException;
 import com.android.tradefed.build.BuildInfo;
@@ -79,7 +80,7 @@ public class MetricsXmlParserTest {
         } catch (ParseException e) {
             // expected
         }
-        Mockito.verifyZeroInteractions(mMetrics);
+        verifyNoMoreInteractions(mMetrics);
     }
 
     /** Simple success test for xml parsing */
