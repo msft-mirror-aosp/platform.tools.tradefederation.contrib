@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -390,15 +391,17 @@ public class UiConductorTest implements IRemoteTest, ITestFilterReceiver {
             try {
                 // Find all nested regular files and use their relative paths as IDs
                 Path dirPath = file.toPath().toAbsolutePath();
-                return Files.walk(dirPath)
-                        .filter(Files::isRegularFile)
-                        .sorted()
-                        .map(
-                                filePath -> {
-                                    String id = dirPath.getParent().relativize(filePath).toString();
-                                    return new UiConductorTestCase(id, key, filePath.toFile());
-                                })
-                        .collect(Collectors.toList());
+                try (Stream<Path> stream = Files.walk(dirPath)) {
+                    return stream.filter(Files::isRegularFile)
+                            .sorted()
+                            .map(
+                                    filePath -> {
+                                        String id =
+                                                dirPath.getParent().relativize(filePath).toString();
+                                        return new UiConductorTestCase(id, key, filePath.toFile());
+                                    })
+                            .collect(Collectors.toList());
+                }
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

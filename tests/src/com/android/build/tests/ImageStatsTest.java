@@ -16,6 +16,9 @@
 
 package com.android.build.tests;
 
+import com.android.tradefed.util.FileUtil;
+
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,6 +26,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -32,18 +36,72 @@ import java.util.regex.Pattern;
 @RunWith(JUnit4.class)
 public class ImageStatsTest {
 
-    // data obtained from build 4597696, taimen-userdebug_fastbuild_linux
-    private static final String TEST_DATA =
-            "   164424453  /system/app/WallpapersBReel2017/WallpapersBReel2017.apk\n"
-                    + "   124082279  /system/app/Chrome/Chrome.apk\n"
-                    + "    92966112  /system/priv-app/Velvet/Velvet.apk\n"
-                    + "     1790897  /system/framework/ext.jar\n"
-                    + "      505436  /system/fonts/NotoSansEgyptianHieroglyphs-Regular.ttf\n"
-                    + "      500448  /system/bin/ip6tables\n"
-                    + "      500393  /system/usr/share/zoneinfo/tzdata\n"
-                    + "      500380  /system/fonts/NotoSansCuneiform-Regular.ttf\n"
-                    + "      126391  /system/framework/core-oj.jar\n"
-                    + "      122641  /system/framework/com.quicinc.cne.jar\n";
+    private static final String TEST_DATA = "  ["
+            + "{\n" +
+            "    \"SHA256\": \"94557affe476aaf1bb77bc2114375162c2a7a066d3d4cfde9a545d7b1bcf\",\n" +
+            "    \"Name\": \"/system/app/WallpapersBReel2017/WallpapersBReel2017.apk\",\n" +
+            "    \"Size\": 164424453\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/app/Chrome/Chrome.apk\",\n" +
+            "    \"Size\": 124082279\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"bff67553c1850054b00324bf24c7e2c57e2d5ca67c475919fde77a661e909\",\n" +
+            "    \"Name\": \"/system/priv-app/Velvet/Velvet.apk\",\n" +
+            "    \"Size\": 92966112\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/framework/ext.jar\",\n" +
+            "    \"Size\": 1790897\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/fonts/NotoSansEgyptianHieroglyphs-Regular.ttf\",\n" +
+            "    \"Size\": 505436\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/bin/ip6tables\",\n" +
+            "    \"Size\": 500448\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/usr/share/zoneinfo/tzdata\",\n" +
+            "    \"Size\": 500393\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/fonts/NotoSansCuneiform-Regular.ttf\",\n" +
+            "    \"Size\": 500380\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/framework/core-oj.jar\",\n" +
+            "    \"Size\": 126391\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/framework/com.quicinc.cne.jar\",\n" +
+            "    \"Size\": 122641\n" +
+            "  }"
+            + "]";
+
+    private static final String TEST_DATA_SMALL = " ["
+            + "{\n" +
+            "    \"SHA256\": \"94557affe476aaf1bb77bc2114375162c2a7a066d3d4cfde9a545d7b1bcfa\",\n" +
+            "    \"Name\": \"/system/app/WallpapersBReel2017/WallpapersBReel2017.apk\",\n" +
+            "    \"Size\": 164424453\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"SHA256\": \"c15be36f620a78b98c79cf236175b33a09df8f9946f5814ba27ab2b746476\",\n" +
+            "    \"Name\": \"/system/app/Chrome/Chrome.apk\",\n" +
+            "    \"Size\": 124082279\n" +
+            "  }"
+            + "]";
+
     private static final Map<String, Long> PARSED_TEST_DATA = new HashMap<>();
 
     static {
@@ -61,15 +119,23 @@ public class ImageStatsTest {
 
     private ImageStats mImageStats = null;
 
+    private File mTestStatsFile;
+
     @Before
     public void setup() throws Exception {
         mImageStats = new ImageStats();
     }
 
+    @After
+    public void tearDown() throws Exception {
+        FileUtil.deleteFile(mTestStatsFile);
+    }
+
     @Test
     public void testParseFileSizes() throws Exception {
-        Map<String, Long> ret =
-                mImageStats.parseFileSizes(new ByteArrayInputStream(TEST_DATA.getBytes()));
+        mTestStatsFile = FileUtil.createTempFile("stats_temp", ".json");
+        FileUtil.writeToFile(TEST_DATA, mTestStatsFile);
+        Map<String, Long> ret = mImageStats.parseFileSizes(mTestStatsFile);
         Assert.assertEquals(
                 "parsed test file sizes mismatches expectations", PARSED_TEST_DATA, ret);
     }
@@ -146,5 +212,35 @@ public class ImageStatsTest {
                 "failed to verify aggregated size for category 'total'",
                 "385519430",
                 ret.get("total"));
+    }
+
+    /** Verifies all the individual file size metrics are added as expected.*/
+    @Test
+    public void testParseFinalMetrics() throws Exception {
+        Map<String, String> finalMetrics = new HashMap<>();
+        mTestStatsFile = FileUtil.createTempFile("stats_temp", ".json");
+        FileUtil.writeToFile(TEST_DATA_SMALL, mTestStatsFile);
+        mImageStats.parseFinalMetrics(mTestStatsFile, finalMetrics);
+        Assert.assertEquals("Total number of metrics is not as expected", 5, finalMetrics.size());
+        Assert.assertEquals(
+                "Failed to get WallpapersBReel2017.apk file metris.",
+                "164424453",
+                finalMetrics.get("/system/app/WallpapersBReel2017/WallpapersBReel2017.apk"));
+        Assert.assertEquals(
+                "Failed to get Chrome.apk file metris'",
+                "124082279",
+                finalMetrics.get("/system/app/Chrome/Chrome.apk"));
+        Assert.assertEquals(
+                "failed to verify aggregated size for category 'categorized'",
+                "0",
+                finalMetrics.get("categorized"));
+        Assert.assertEquals(
+                "failed to verify aggregated size for category 'uncategorized'",
+                "288506732",
+                finalMetrics.get("uncategorized"));
+        Assert.assertEquals(
+                "failed to verify aggregated size for category 'total'",
+                "288506732",
+                finalMetrics.get("total"));
     }
 }
