@@ -18,7 +18,8 @@ package {
 
 java_test_host {
     name: "tf-contrib-tests",
-
+    // Nothing should dependent on contrib tests
+    visibility: ["//visibility:private"],
     // Only compile source java files in this lib.
     srcs: ["src/**/*.java"],
 
