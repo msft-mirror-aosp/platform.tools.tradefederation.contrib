@@ -28,15 +28,11 @@ import java.util.Map;
 public class InodeopBenchmarkTestTest {
     private static final String MOCK_INODEOP_OUTPUT_V0 = "0;test_workload;15.2;ms";
     private static final String[] MOCK_INODEOP_OUTPUT_FIELDS_V0 = MOCK_INODEOP_OUTPUT_V0.split(";");
-    private static final Map<InodeopOutputV0, String> expectedFields =
-            new HashMap<>() {
-                {
-                    put(InodeopOutputV0.VERSION, "0");
-                    put(InodeopOutputV0.WORKLOAD, "test_workload");
-                    put(InodeopOutputV0.EXEC_TIME, "15.2");
-                    put(InodeopOutputV0.TIME_UNIT, "ms");
-                }
-            };
+    private static final Map<InodeopOutputV0, String> expectedFields = Map.of(
+                InodeopOutputV0.VERSION, "0",
+                InodeopOutputV0.WORKLOAD, "test_workload",
+                InodeopOutputV0.EXEC_TIME, "15.2",
+                InodeopOutputV0.TIME_UNIT, "ms");
 
     private static void checkInodeopCommandOptions(
             String inodeopCommand, String[] expectedOptions) {
