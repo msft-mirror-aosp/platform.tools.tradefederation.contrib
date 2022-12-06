@@ -112,6 +112,19 @@ protected static abstract class AbstractCameraTestMetricsCollectionListener exte
         mListener.testRunStarted(runName, testCount);
     }
 
+        @Override
+        public void testRunStarted(String runName, int testCount, int attemptNumber) {
+            super.testRunStarted(runName, testCount, attemptNumber);
+            mListener.testRunStarted(runName, testCount, attemptNumber);
+        }
+
+        @Override
+        public void testRunStarted(
+                String runName, int testCount, int attemptNumber, long startTime) {
+            super.testRunStarted(runName, testCount, attemptNumber, startTime);
+            mListener.testRunStarted(runName, testCount, attemptNumber, startTime);
+        }
+
     @Override
     public void testRunStopped(long elapsedTime) {
         super.testRunStopped(elapsedTime);
