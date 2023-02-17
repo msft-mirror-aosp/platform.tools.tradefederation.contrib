@@ -25,6 +25,9 @@ tradefed_java_library_host {
     // Only compile source java files in this lib.
     srcs: ["src/**/*.java"],
 
+    // b/267831518: Pin tradefed and dependencies to Java 11.
+    java_version: "11",
+
     java_resource_dirs: ["res"],
 
     javacflags: [
