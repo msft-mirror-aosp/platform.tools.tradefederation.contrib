@@ -16,16 +16,22 @@
   -->
 <configuration description="Boot Time Test">
     <metrics_collector class="com.android.tradefed.device.metric.AtraceCollector"/>
+    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer" />
+    <!-- Needed to set perfetto trace property before fastboot commands -->
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer" />
     <target_preparer class="com.android.tradefed.targetprep.FastbootCommandPreparer" />
     <!-- Needed multiple run command target preparer for running commands before/after install. -->
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer" />
     <target_preparer class="com.android.tradefed.targetprep.TestAppInstallSetup" />
-    <target_preparer class="com.android.tradefed.targetprep.PushFilePreparer" />
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer" />
     <target_preparer class="com.android.tradefed.targetprep.InstrumentationPreparer" >
         <option name="disable" value="true" />
     </target_preparer>
     <test class="com.android.performance.tests.BootTimeTest" />
+    <metrics_collector class="com.android.tradefed.device.metric.PerfettoPullerMetricCollector">
+        <option name="collect-on-run-ended-only" value="false" />
+    </metrics_collector>
+    <metric_post_processor class="com.android.tradefed.postprocessor.PerfettoGenericPostProcessor" />
     <metric_post_processor class="com.android.tradefed.postprocessor.MetricFilePostProcessor">
         <option name="aggregate-similar-tests" value="true" />
     </metric_post_processor>
