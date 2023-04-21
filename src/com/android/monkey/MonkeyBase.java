@@ -183,7 +183,7 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
             description =
                     "How much time to wait between sending successive "
                             + "events, in msecs.  Default is 0ms.")
-    private int mThrottle = 0;
+    private long mThrottle = 0;
 
     @Option(
             name = "ignore-crashes",
@@ -218,11 +218,11 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
     private boolean mUseAllowlistFile = false;
 
     @Option(
-            name = "monkey-timeout",
+            name = "per-event-timeout",
             description =
-                    "How long to wait for the monkey to "
-                            + "complete, in minutes. Default is 4 hours.")
-    private int mMonkeyTimeout = 4 * 60;
+                    "A per event timeout in ms, for determining the total timeout for "
+                            + "monkey run together with throttle and target event injection count.")
+    private long mPerEventTimeout = 100;
 
     @Option(
             name = "warmup-component",
@@ -358,7 +358,9 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
 
         // Generate the monkey command to run, given the options
         String command = buildMonkeyCommand();
-        CLog.i("About to run monkey with at %d minute timeout: %s", mMonkeyTimeout, command);
+        CLog.i(
+                "About to run monkey with at %d minute timeout: %s",
+                TimeUnit.MILLISECONDS.toMinutes(getMonkeyTimeoutMs()), command);
 
         StringBuilder outputBuilder = new StringBuilder();
         CommandHelper commandHelper = new CommandHelper();
@@ -597,7 +599,7 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
 
         if (mThrottle >= 1) {
             cmdList.add("--throttle");
-            cmdList.add(Integer.toString(mThrottle));
+            cmdList.add(Long.toString(mThrottle));
         }
         if (mIgnoreCrashes) {
             cmdList.add("--ignore-crashes");
@@ -748,6 +750,6 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
 
     /** Get the monkey timeout in milliseconds */
     protected long getMonkeyTimeoutMs() {
-        return mMonkeyTimeout * 60 * 1000;
+        return (mPerEventTimeout + mThrottle) * mTargetCount;
     }
 }
