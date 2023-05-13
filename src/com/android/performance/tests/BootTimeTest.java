@@ -589,7 +589,7 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             double bootStart = INVALID_TIME_DURATION;
             double onlineTime = INVALID_TIME_DURATION;
             double bootTime = INVALID_TIME_DURATION;
-            String testId = String.format("%s.%s_%d", BOOTTIME_TEST, BOOTTIME_TEST, (count + 1));
+            String testId = String.format("%s.%s$%d", BOOTTIME_TEST, BOOTTIME_TEST, (count + 1));
             TestDescription successiveBootIterationTestId =
                     new TestDescription(testId, String.format("%s", SUCCESSIVE_BOOT_TEST));
             if (mBootTimePerIteration) {
@@ -690,7 +690,7 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 }
             }
 
-            String perfettoTraceFilePath = processPerfettoFile(testId);
+            String perfettoTraceFilePath = processPerfettoFile(testId.replace("$", "_"));
 
             if (mBootTimePerIteration) {
                 Map<String, String> iterationResult = new HashMap<>();
