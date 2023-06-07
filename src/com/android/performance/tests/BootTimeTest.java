@@ -98,6 +98,8 @@ public class BootTimeTest extends InstalledInstrumentationsTest
     private static final String SUCCESSIVE_BOOT = "successive-boot";
     private static final String LOGCAT_CMD = "logcat *:V";
     private static final String LOGCAT_CMD_ALL = "logcat -b all *:V";
+    private static final String LOGCAT_CMD_STATISTICS = "logcat --statistics --pid %d";
+    private static final String LOGCAT_CMD_STATISTICS_ALL = "logcat --statistics";
     private static final long LOGCAT_SIZE = 80 * 1024 * 1024;
     private static final String BOOT_COMPLETED_PROP = "getprop sys.boot_completed";
     private static final String BOOT_COMPLETED_VAL = "1";
@@ -129,9 +131,12 @@ public class BootTimeTest extends InstalledInstrumentationsTest
     /** logcat command for selinux, pinnerservice, fatal messages */
     private static final String LOGCAT_COMBINED_CMD =
             "logcat -b all auditd:* PinnerService:* \\*:F";
-
     private static final String TOTAL_BOOT_TIME = "TOTAL_BOOT_TIME";
     private static final String BOOT_PHASE_1000 = "starting_phase_1000";
+    private static final String METRIC_KEY_SEPARATOR = "_";
+    private static final String LOGCAT_STATISTICS_SIZE = "logcat_statistics_size_bytes";
+    private static final String LOGCAT_STATISTICS_DIFF_SIZE =
+            "logcat_statistics_size_bytes_dropped";
     private static final String DMESG_BOOT_COMPLETE_TIME =
             "dmesg_action_sys.boot_completed_first_timestamp";
     private static final String MAKE_DIR = "mkdir %s";
@@ -152,6 +157,7 @@ public class BootTimeTest extends InstalledInstrumentationsTest
     private static final String TIMESTAMP_PID =
             "^(\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3})\\s+" + "(\\d+)\\s+(\\d+)\\s+([A-Z])\\s+";
     // 04-05 18:26:52.637 2161 2176 I BootHelperTest: Screen Unlocked
+    private static final String ALL_PROCESS_CMD = "ps -A";
     private static final Pattern SCREEN_UNLOCKED =
             Pattern.compile(TIMESTAMP_PID + "(.+?)\\s*: Screen Unlocked$");
     // 04-05 18:26:54.320 1013 1121 I ActivityManager: Displayed
@@ -166,6 +172,23 @@ public class BootTimeTest extends InstalledInstrumentationsTest
     private static final Pattern KERNEL_START_PATTERN = Pattern.compile("Linux version");
     /** Matches the logcat line indicating boot completed */
     private static final Pattern LOGCAT_BOOT_COMPLETED = Pattern.compile("Starting phase 1000");
+
+    private static final Pattern LOGCAT_STATISTICS_HEADER_PATTERN =
+            Pattern.compile(
+                    "^size\\/num\\s*(\\w+)\\s*(\\w+)\\s*(\\w+)\\s*(\\w+)\\s*(\\w+)*",
+                    Pattern.CASE_INSENSITIVE);
+    private static final Pattern LOGCAT_STATISTICS_TOTAL_PATTERN =
+            Pattern.compile(
+                    "Total\\s*(\\d+)\\/(\\d+)\\s*(\\d+)\\/(\\d+)\\s*(\\d+)\\/(\\d+)\\s*"
+                            + "(\\d+)\\/(\\d+)\\s*(\\d+)\\/(\\d+).*",
+                    Pattern.CASE_INSENSITIVE);
+    private static final Pattern LOGCAT_STATISTICS_NOW_PATTERN =
+            Pattern.compile(
+                    "Now\\s+(\\d+)\\/(\\d+)\\s*(\\d+)\\/(\\d+)\\s*(\\d+)\\/(\\d+)\\s*"
+                            + "(\\d+)\\/(\\d+)\\s*(\\d+)\\/(\\d+).*",
+                    Pattern.CASE_INSENSITIVE);
+    private static final Pattern LOGCAT_STATISTICS_PID_PATTERN =
+            Pattern.compile("Logging for this PID", Pattern.CASE_INSENSITIVE);
 
     @Option(name = "test-run-name", description = "run name to report to result reporters")
     private String mTestRunName = BOOTTIME_TEST;
@@ -303,6 +326,11 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                     "Skip the pin setup if already set once"
                             + "and not needed for the second run especially in local testing.")
     private boolean mSkipPinSetup = false;
+
+    @Option(
+            name = "collect-logcat-info",
+            description = "Run logcat --statistics command and collect data")
+    private boolean mCollectLogcat = false;
 
     private IBuildInfo mBuildInfo;
     private IConfiguration mConfiguration;
@@ -637,6 +665,12 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 }
             }
 
+            // Parse logcat info
+            Map<String, String> collectLogcatInfoResult = new HashMap<>();
+            if (mCollectLogcat) {
+                collectLogcatInfoResult.putAll(collectLogcatInfo());
+            }
+
             // Parse bootloader timing info
             if (mBootloaderInfo) analyzeBootloaderTimingInfo();
 
@@ -700,12 +734,114 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 if (perfettoTraceFilePath != null) {
                     iterationResult.put("perfetto_file_path", perfettoTraceFilePath);
                 }
+                if (!collectLogcatInfoResult.isEmpty()) {
+                    iterationResult.putAll(collectLogcatInfoResult);
+                }
                 listener.testEnded(successiveBootIterationTestId, iterationResult);
             }
+
             mBootIterationInfo.clear();
             CLog.v("Waiting for %d msecs after boot completed.", mBootDelayTime);
             getRunUtil().sleep(mBootDelayTime);
         }
+    }
+
+    /** Get the logcat statistics info */
+    private Map<String, String> collectLogcatInfo() throws DeviceNotAvailableException {
+        Map<String, String> results = new HashMap<>();
+
+        // Parse logcat in global level
+        results.putAll(extractLogcatInfo(-1, "general"));
+
+        // Get all the process PIDs first
+        Map<Integer, String> pids = getPids();
+        if (pids.size() == 0) {
+            CLog.e("Failed to get all the valid process PIDs");
+            return results;
+        }
+        // Parse logcat in process level
+        for (Map.Entry<Integer, String> process : pids.entrySet()) {
+            results.putAll(extractLogcatInfo(process.getKey(), process.getValue()));
+        }
+        return results;
+    }
+
+    /** Get pid of all processes */
+    private Map<Integer, String> getPids() throws DeviceNotAvailableException {
+        // return pids
+        Map<Integer, String> pids = new HashMap<>();
+        String pidOutput = getDevice().executeShellCommand(ALL_PROCESS_CMD);
+        // Sample output for the process info
+        // Sample command : "ps -A"
+        // Sample output :
+        // system   4533   410 13715708 78536 do_freezer_trap 0 S    com.android.keychain
+        // root    32552     2        0     0   worker_thread 0 I [kworker/6:0-memlat_wq]
+        String[] lines = pidOutput.split(System.lineSeparator());
+        for (String line : lines) {
+            String[] splitLine = line.split("\\s+");
+            // Skip the first (i.e header) line from "ps -A" output.
+            if (splitLine[1].equalsIgnoreCase("PID")) {
+                continue;
+            }
+            String processName = splitLine[splitLine.length - 1].replace("\n", "").trim();
+            pids.put(Integer.parseInt(splitLine[1]), processName);
+        }
+        return pids;
+    }
+
+    /** Get the logcat statistics info */
+    private Map<String, String> extractLogcatInfo(int pid, String processName)
+            throws DeviceNotAvailableException {
+        Map<String, String> results = new HashMap<>();
+        String runCommand =
+                pid == -1 ? LOGCAT_CMD_STATISTICS_ALL : String.format(LOGCAT_CMD_STATISTICS, pid);
+        String output = getDevice().executeShellCommand(runCommand);
+        // Sample output for $ logcat --statistics
+        // size/num main         system          crash           kernel   Total
+        // Total    33/23        96/91           3870/4          70/1     513/41
+        // Now      92/70        4/15            0/0             13/11    33/26
+        // Logspan  5:15:15.15   11d 20:37:31.37 13:20:54.185    11d 20:40:06.816
+        // Overhead 253454       56415               255139      1330477
+        Matcher matcherHeader = LOGCAT_STATISTICS_HEADER_PATTERN.matcher(output);
+        Matcher matcherTotal = LOGCAT_STATISTICS_TOTAL_PATTERN.matcher(output);
+        Matcher matcherNow = LOGCAT_STATISTICS_NOW_PATTERN.matcher(output);
+        Matcher matcherPid = LOGCAT_STATISTICS_PID_PATTERN.matcher(output);
+        boolean headerFound = matcherHeader.find();
+        boolean totalFound = matcherTotal.find();
+        boolean nowFound = matcherNow.find();
+        boolean pidFound = matcherPid.find();
+
+        if (pid != -1 && !pidFound) {
+            // the process doesn't exist when querying logcat in this pid
+            CLog.d("Process %s with pid %d doesn't exist anymore.", processName, pid);
+            return results;
+        }
+
+        if (headerFound && totalFound && nowFound) {
+            for (int i = 1; i < 5; i++) {
+                String bufferHeader = matcherHeader.group(i).trim();
+                results.put(
+                        String.join(
+                                METRIC_KEY_SEPARATOR,
+                                LOGCAT_STATISTICS_SIZE,
+                                bufferHeader,
+                                processName),
+                        matcherTotal.group(i * 2 - 1).trim());
+                if (pid == -1) {
+                    // we don't calculate the diff for process level
+                    results.put(
+                            String.join(
+                                    METRIC_KEY_SEPARATOR,
+                                    LOGCAT_STATISTICS_DIFF_SIZE,
+                                    bufferHeader,
+                                    processName),
+                            Integer.toString(
+                                    Integer.valueOf(matcherTotal.group(i * 2 - 1).trim())
+                                            - Integer.valueOf(matcherNow.group(i * 2 - 1).trim())));
+                }
+            }
+        }
+        return results;
     }
 
     /**
