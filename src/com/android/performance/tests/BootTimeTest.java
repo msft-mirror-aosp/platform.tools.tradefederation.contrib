@@ -188,7 +188,9 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                             + "(\\d+)\\/(\\d+)\\s*(\\d+)\\/(\\d+).*",
                     Pattern.CASE_INSENSITIVE);
     private static final Pattern LOGCAT_STATISTICS_PID_PATTERN =
-            Pattern.compile("Logging for this PID", Pattern.CASE_INSENSITIVE);
+            Pattern.compile(
+                    "Logging for this PID.*\\s+([0-9]+)$",
+                    Pattern.CASE_INSENSITIVE | Pattern.MULTILINE | Pattern.DOTALL);
 
     @Option(name = "test-run-name", description = "run name to report to result reporters")
     private String mTestRunName = BOOTTIME_TEST;
@@ -763,6 +765,7 @@ public class BootTimeTest extends InstalledInstrumentationsTest
         for (Map.Entry<Integer, String> process : pids.entrySet()) {
             results.putAll(extractLogcatInfo(process.getKey(), process.getValue()));
         }
+
         return results;
     }
 
@@ -796,39 +799,33 @@ public class BootTimeTest extends InstalledInstrumentationsTest
         String runCommand =
                 pid == -1 ? LOGCAT_CMD_STATISTICS_ALL : String.format(LOGCAT_CMD_STATISTICS, pid);
         String output = getDevice().executeShellCommand(runCommand);
-        // Sample output for $ logcat --statistics
-        // size/num main         system          crash           kernel   Total
-        // Total    33/23        96/91           3870/4          70/1     513/41
-        // Now      92/70        4/15            0/0             13/11    33/26
-        // Logspan  5:15:15.15   11d 20:37:31.37 13:20:54.185    11d 20:40:06.816
-        // Overhead 253454       56415               255139      1330477
-        Matcher matcherHeader = LOGCAT_STATISTICS_HEADER_PATTERN.matcher(output);
-        Matcher matcherTotal = LOGCAT_STATISTICS_TOTAL_PATTERN.matcher(output);
-        Matcher matcherNow = LOGCAT_STATISTICS_NOW_PATTERN.matcher(output);
-        Matcher matcherPid = LOGCAT_STATISTICS_PID_PATTERN.matcher(output);
-        boolean headerFound = matcherHeader.find();
-        boolean totalFound = matcherTotal.find();
-        boolean nowFound = matcherNow.find();
-        boolean pidFound = matcherPid.find();
+        String[] outputList = output.split("\\n\\n");
 
-        if (pid != -1 && !pidFound) {
-            // the process doesn't exist when querying logcat in this pid
-            CLog.d("Process %s with pid %d doesn't exist anymore.", processName, pid);
-            return results;
-        }
-
-        if (headerFound && totalFound && nowFound) {
-            for (int i = 1; i < 5; i++) {
-                String bufferHeader = matcherHeader.group(i).trim();
-                results.put(
-                        String.join(
-                                METRIC_KEY_SEPARATOR,
-                                LOGCAT_STATISTICS_SIZE,
-                                bufferHeader,
-                                processName),
-                        matcherTotal.group(i * 2 - 1).trim());
-                if (pid == -1) {
-                    // we don't calculate the diff for process level
+        if (pid == -1) {
+            // General statistics
+            // Sample output for $ logcat --statistics
+            // size/num main         system          crash           kernel   Total
+            // Total    33/23        96/91           3870/4          70/1     513/41
+            // Now      92/70        4/15            0/0             13/11    33/26
+            // Logspan  5:15:15.15   11d 20:37:31.37 13:20:54.185    11d 20:40:06.816
+            // Overhead 253454       56415               255139      1330477
+            Matcher matcherHeader = LOGCAT_STATISTICS_HEADER_PATTERN.matcher(outputList[0]);
+            Matcher matcherTotal = LOGCAT_STATISTICS_TOTAL_PATTERN.matcher(outputList[0]);
+            Matcher matcherNow = LOGCAT_STATISTICS_NOW_PATTERN.matcher(outputList[0]);
+            boolean headerFound = matcherHeader.find();
+            boolean totalFound = matcherTotal.find();
+            boolean nowFound = matcherNow.find();
+            if (headerFound && totalFound && nowFound) {
+                // There are 6 columns in the output, but we just want to extract column 1 to 4
+                for (int i = 1; i < 5; i++) {
+                    String bufferHeader = matcherHeader.group(i).trim();
+                    results.put(
+                            String.join(
+                                    METRIC_KEY_SEPARATOR,
+                                    LOGCAT_STATISTICS_SIZE,
+                                    bufferHeader,
+                                    processName),
+                            matcherTotal.group(i * 2 - 1).trim());
                     results.put(
                             String.join(
                                     METRIC_KEY_SEPARATOR,
@@ -840,7 +837,30 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                                             - Integer.valueOf(matcherNow.group(i * 2 - 1).trim())));
                 }
             }
+        } else if (outputList.length > 1) {
+            // Process statistics
+            // Sample output for $ logcat --statistics --pid 3330
+            // Logging for this PID:                                        Size        Pruned
+            //  PID/UID   COMMAND LINE                                    BYTES           NUM
+            // 3330/10171 ...ogle.android.googlequicksearchbox:interactor 13024
+            boolean pidFound = false;
+            for (int i = 0; i < outputList.length; i++) {
+                Matcher matcherPid = LOGCAT_STATISTICS_PID_PATTERN.matcher(outputList[i]);
+                pidFound = matcherPid.find();
+                if (!pidFound) continue;
+                CLog.d("logcat statistics pid %d output = %s", pid, outputList[i]);
+                results.put(
+                        String.join(METRIC_KEY_SEPARATOR, LOGCAT_STATISTICS_SIZE, processName),
+                        matcherPid.group(1).trim());
+            }
+            if (!pidFound) {
+                // the process doesn't found in the logcat statistics output
+                CLog.d(
+                        "Process %s with pid %d doesn't exist in logcat statistics.",
+                        processName, pid);
+            }
         }
+
         return results;
     }
 
