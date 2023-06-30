@@ -78,8 +78,10 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
     @Option(
             name = "test-app-file-name",
             description =
-                    "the name of an apk file to be installed in the work profile. Can be repeated.")
-    private List<String> mTestFiles = new ArrayList<>();
+                    "the name of an apk file to be installed in work profile. Can be repeated. Items "
+                            + "that are directories will have any APKs contained therein, "
+                            + "including subdirectories, grouped by package name and installed.")
+    private List<File> mTestFiles = new ArrayList<>();
 
     @Option(
             name = "test-app-alt-dir",
@@ -163,8 +165,8 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
                         mManagedProfileUserId, mTestFiles));
         mInstallPreparer.setUserId(mManagedProfileUserId);
         mInstallPreparer.setShouldGrantPermission(true);
-        for (String file : mTestFiles) {
-            mInstallPreparer.addTestFileName(file);
+        for (File file : mTestFiles) {
+            mInstallPreparer.addTestFile(file);
         }
         for (File dir : mAltTestDirs) {
             mInstallPreparer.setAltDir(dir);
