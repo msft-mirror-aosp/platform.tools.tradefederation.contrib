@@ -848,10 +848,13 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 Matcher matcherPid = LOGCAT_STATISTICS_PID_PATTERN.matcher(outputList[i]);
                 pidFound = matcherPid.find();
                 if (!pidFound) continue;
-                CLog.d("logcat statistics pid %d output = %s", pid, outputList[i]);
+                CLog.d(
+                        "Process %s with pid %d : logcat statistics output = %s",
+                        processName, pid, outputList[i]);
                 results.put(
                         String.join(METRIC_KEY_SEPARATOR, LOGCAT_STATISTICS_SIZE, processName),
                         matcherPid.group(1).trim());
+                break;
             }
             if (!pidFound) {
                 // the process doesn't found in the logcat statistics output
@@ -860,7 +863,6 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                         processName, pid);
             }
         }
-
         return results;
     }
 
