@@ -245,6 +245,12 @@ public class BootTimeTest extends InstalledInstrumentationsTest
     private long mBootDelayTime = 2000;
 
     @Option(
+            name = "after-boot-delay",
+            isTimeVal = true,
+            description = "Time to wait immediately after the successive boots.")
+    private long mAfterBootDelayTime = 0;
+
+    @Option(
             name = "post-initial-boot-idle",
             isTimeVal = true,
             description =
@@ -634,6 +640,8 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             getDevice().waitForDeviceOnline();
             onlineTime = System.currentTimeMillis() - bootStart;
             getDevice().enableAdbRoot();
+            CLog.v("Waiting for %d msecs immediately after successive boot.", mAfterBootDelayTime);
+            getRunUtil().sleep(mAfterBootDelayTime);
             dmesgLogParser = new DmesgParser();
             if (mDmesgInfo && mDumpDmesgImmediate) {
                 // Collect the dmesg logs after device is online and
