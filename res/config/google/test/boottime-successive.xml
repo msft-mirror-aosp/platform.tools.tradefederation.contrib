@@ -31,8 +31,8 @@
     <metrics_collector class="com.android.tradefed.device.metric.PerfettoPullerMetricCollector">
         <option name="collect-on-run-ended-only" value="false" />
     </metrics_collector>
-    <metric_post_processor class="com.android.tradefed.postprocessor.PerfettoGenericPostProcessor" />
     <metric_post_processor class="com.android.tradefed.postprocessor.MetricFilePostProcessor">
         <option name="aggregate-similar-tests" value="true" />
     </metric_post_processor>
+    <metric_post_processor class="com.android.tradefed.postprocessor.PerfettoGenericPostProcessor" />
 </configuration>
