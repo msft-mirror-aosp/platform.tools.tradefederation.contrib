@@ -192,6 +192,8 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                     "Logging for this PID.*\\s+([0-9]+)$",
                     Pattern.CASE_INSENSITIVE | Pattern.MULTILINE | Pattern.DOTALL);
 
+    private static final String METRIC_COUNT = "MetricCount";
+
     @Option(name = "test-run-name", description = "run name to report to result reporters")
     private String mTestRunName = BOOTTIME_TEST;
 
@@ -339,6 +341,13 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             name = "collect-logcat-info",
             description = "Run logcat --statistics command and collect data")
     private boolean mCollectLogcat = false;
+
+    @Option(
+            name = "metric-prefix-pattern-for-count",
+            description =
+                    "A list of metric prefix pattern that will be used to count number of metrics"
+                            + " generated in the test")
+    private List<String> mMetricPrefixPatternForCount = new ArrayList<>();
 
     private IBuildInfo mBuildInfo;
     private IConfiguration mConfiguration;
@@ -746,6 +755,22 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 }
                 if (!collectLogcatInfoResult.isEmpty()) {
                     iterationResult.putAll(collectLogcatInfoResult);
+                }
+                // If  metric-prefix-pattern-for-count is present, calculate the count
+                // of all metrics with the prefix pattern and add the count as a new metric to the
+                // iterationResult map.
+                if (!mMetricPrefixPatternForCount.isEmpty()) {
+                    for (String metricPrefixPattern : mMetricPrefixPatternForCount) {
+                        long metricCount =
+                                iterationResult.entrySet().stream()
+                                        .filter(
+                                                (entry) ->
+                                                        entry.getKey()
+                                                                .startsWith(metricPrefixPattern))
+                                        .count();
+                        iterationResult.put(
+                                metricPrefixPattern + METRIC_COUNT, Long.toString(metricCount));
+                    }
                 }
                 listener.testEnded(successiveBootIterationTestId, iterationResult);
             }
