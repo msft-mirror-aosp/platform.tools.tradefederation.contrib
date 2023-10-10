@@ -109,7 +109,7 @@ public class BootTimeTest extends InstalledInstrumentationsTest
     private static final String LOGCAT_FILE = "Successive_reboots_logcat";
     private static final String LOGCAT_UNLOCK_FILE = "Successive_reboots_unlock_logcat";
     private static final String BOOT_COMPLETE_ACTION = "sys.boot_completed=1";
-    private static final String RUNNER = "android.support.test.runner.AndroidJUnitRunner";
+    private static final String RUNNER = "androidx.test.runner.AndroidJUnitRunner";
     private static final String PACKAGE_NAME = "com.android.boothelper";
     private static final String CLASS_NAME = "com.android.boothelper.BootHelperTest";
     private static final String SETUP_PIN_TEST = "setupLockScreenPin";
@@ -635,8 +635,15 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             double onlineTime = INVALID_TIME_DURATION;
             double bootTime = INVALID_TIME_DURATION;
             String testId = String.format("%s.%s$%d", BOOTTIME_TEST, BOOTTIME_TEST, (count + 1));
-            TestDescription successiveBootIterationTestId =
-                    new TestDescription(testId, String.format("%s", SUCCESSIVE_BOOT_TEST));
+            TestDescription successiveBootIterationTestId;
+            if (!dismissPin) {
+                successiveBootIterationTestId =
+                        new TestDescription(testId, String.format("%s", SUCCESSIVE_BOOT_TEST));
+            } else {
+                successiveBootIterationTestId =
+                        new TestDescription(
+                                testId, String.format("%s", SUCCESSIVE_BOOT_UNLOCK_TEST));
+            }
             if (mBootTimePerIteration) {
                 listener.testStarted(successiveBootIterationTestId);
             }
@@ -649,8 +656,6 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             getDevice().waitForDeviceOnline();
             onlineTime = System.currentTimeMillis() - bootStart;
             getDevice().enableAdbRoot();
-            CLog.v("Waiting for %d msecs immediately after successive boot.", mAfterBootDelayTime);
-            getRunUtil().sleep(mAfterBootDelayTime);
             dmesgLogParser = new DmesgParser();
             if (mDmesgInfo && mDumpDmesgImmediate) {
                 // Collect the dmesg logs after device is online and
@@ -694,12 +699,13 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             if (mBootloaderInfo) analyzeBootloaderTimingInfo();
 
             if (dismissPin) {
+                getRunUtil().sleep(2000);
                 mRunner = createRemoteAndroidTestRunner(UNLOCK_PIN_TEST);
                 getDevice().runInstrumentationTests(mRunner, new CollectingTestListener());
-                // Wait for 15 secs after every unlock to make sure home screen is loaded
-                // and logs are printed
-                getRunUtil().sleep(15000);
             }
+
+            CLog.v("Waiting for %d msecs immediately after successive boot.", mAfterBootDelayTime);
+            getRunUtil().sleep(mAfterBootDelayTime);
             if (onlineTime != INVALID_TIME_DURATION) {
                 if (mBootInfo.containsKey(SUCCESSIVE_ONLINE)) {
                     mBootInfo.get(SUCCESSIVE_ONLINE).add(onlineTime);
