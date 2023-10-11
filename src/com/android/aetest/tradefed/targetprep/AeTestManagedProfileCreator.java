@@ -141,9 +141,13 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
                             "%s was set as profile owner of user %d",
                             mProfileOwnerComponent, mManagedProfileUserId));
         }
+        /*
+        Commenting this out, as the reboot somehow evaporates the permissions granted to
+        managed profile apps during installation. Creation of apps is not being impacted by this.
+        */
         // Reboot device to create the apps in managed profile.
-        device.reboot();
-        device.waitForDeviceAvailable();
+        // device.reboot();
+        // device.waitForDeviceAvailable();
     }
 
     /** {@inheritDoc} */
