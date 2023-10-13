@@ -38,7 +38,6 @@ import com.android.tradefed.invoker.IInvocationContext;
 import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
-import com.android.tradefed.result.CollectingTestListener;
 import com.android.tradefed.result.FailureDescription;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.result.InputStreamSource;
@@ -427,6 +426,9 @@ public class BootTimeTest extends InstalledInstrumentationsTest
         mTestInfo = testInfo;
         long start = System.currentTimeMillis();
         listener.testRunStarted(mTestRunName, 1);
+        for (IMetricCollector collector : mCollectors) {
+            listener = collector.init(mInvocationContext, listener);
+        }
         try {
             try {
                 // Set the current date from the host in test device.
@@ -497,15 +499,17 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                         // setup the pin.
                         if (!mSkipPinSetup) {
                             mRunner = createRemoteAndroidTestRunner(SETUP_PIN_TEST);
-                            getDevice()
-                                    .runInstrumentationTests(mRunner, new CollectingTestListener());
+                            getDevice().runInstrumentationTests(mRunner, listener);
                         }
                         testSuccessiveBoots(true, listener);
                     } finally {
-                        try (InputStreamSource logcatData = mRebootLogcatReceiver.getLogcatData()) {
-                            listener.testLog(LOGCAT_UNLOCK_FILE, LogDataType.TEXT, logcatData);
+                        if (null != mRebootLogcatReceiver) {
+                            try (InputStreamSource logcatData =
+                                    mRebootLogcatReceiver.getLogcatData()) {
+                                listener.testLog(LOGCAT_UNLOCK_FILE, LogDataType.TEXT, logcatData);
+                            }
+                            mRebootLogcatReceiver.stop();
                         }
-                        mRebootLogcatReceiver.stop();
                         listener.testStarted(successiveBootUnlockTestId);
                         listener.testEnded(successiveBootUnlockTestId, successiveBootUnlockResult);
                     }
@@ -613,9 +617,6 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             throws DeviceNotAvailableException {
         CLog.v("Waiting for %d msecs before successive boots.", mBootDelayTime);
         getRunUtil().sleep(mBootDelayTime);
-        for (IMetricCollector collector : mCollectors) {
-            listener = collector.init(mInvocationContext, listener);
-        }
         for (int count = 0; count < mBootCount; count++) {
             getDevice().enableAdbRoot();
             // Property used for collecting the perfetto trace file on boot.
@@ -643,9 +644,6 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 successiveBootIterationTestId =
                         new TestDescription(
                                 testId, String.format("%s", SUCCESSIVE_BOOT_UNLOCK_TEST));
-            }
-            if (mBootTimePerIteration) {
-                listener.testStarted(successiveBootIterationTestId);
             }
             if (mGranularBootInfo || dismissPin) {
                 clearAndStartLogcat();
@@ -701,7 +699,11 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             if (dismissPin) {
                 getRunUtil().sleep(2000);
                 mRunner = createRemoteAndroidTestRunner(UNLOCK_PIN_TEST);
-                getDevice().runInstrumentationTests(mRunner, new CollectingTestListener());
+                getDevice().runInstrumentationTests(mRunner, listener);
+            }
+
+            if (mBootTimePerIteration) {
+                listener.testStarted(successiveBootIterationTestId);
             }
 
             CLog.v("Waiting for %d msecs immediately after successive boot.", mAfterBootDelayTime);
