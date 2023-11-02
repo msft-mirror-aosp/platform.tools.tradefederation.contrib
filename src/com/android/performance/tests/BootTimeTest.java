@@ -38,6 +38,7 @@ import com.android.tradefed.invoker.IInvocationContext;
 import com.android.tradefed.invoker.TestInformation;
 import com.android.tradefed.log.LogUtil.CLog;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
+import com.android.tradefed.result.CollectingTestListener;
 import com.android.tradefed.result.FailureDescription;
 import com.android.tradefed.result.ITestInvocationListener;
 import com.android.tradefed.result.InputStreamSource;
@@ -499,7 +500,8 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                         // setup the pin.
                         if (!mSkipPinSetup) {
                             mRunner = createRemoteAndroidTestRunner(SETUP_PIN_TEST);
-                            getDevice().runInstrumentationTests(mRunner, listener);
+                            getDevice()
+                                    .runInstrumentationTests(mRunner, new CollectingTestListener());
                         }
                         testSuccessiveBoots(true, listener);
                     } finally {
@@ -699,7 +701,7 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             if (dismissPin) {
                 getRunUtil().sleep(2000);
                 mRunner = createRemoteAndroidTestRunner(UNLOCK_PIN_TEST);
-                getDevice().runInstrumentationTests(mRunner, listener);
+                getDevice().runInstrumentationTests(mRunner, new CollectingTestListener());
             }
 
             if (mBootTimePerIteration) {
