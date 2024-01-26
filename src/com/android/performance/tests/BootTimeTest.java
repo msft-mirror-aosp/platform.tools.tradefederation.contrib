@@ -742,7 +742,12 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 }
             }
 
-            String perfettoTraceFilePath = processPerfettoFile(testId.replace("$", "_"));
+            String perfettoTraceFilePath =
+                    processPerfettoFile(
+                            String.format(
+                                    "%s_%s",
+                                    successiveBootIterationTestId.getClassName().replace("$", "_"),
+                                    successiveBootIterationTestId.getTestName()));
 
             if (mBootTimePerIteration) {
                 Map<String, String> iterationResult = new HashMap<>();
