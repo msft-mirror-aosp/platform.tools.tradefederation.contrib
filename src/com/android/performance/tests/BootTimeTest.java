@@ -219,17 +219,6 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             importance = Importance.IF_UNSET)
     private List<File> mTestFileNames = new ArrayList<>();
 
-    @Option(
-            name = "alt-dir",
-            description =
-                    "Alternate directory to look for the apk if the apk is not in the tests zip"
-                            + " file. For each alternate dir, will look in //, //data/app, "
-                            + "//DATA/app,"
-                            + " //DATA/app/apk_name/ and //DATA/priv-app/apk_name/. Can be "
-                            + "repeated."
-                            + " Look for apks in last alt-dir first.")
-    private List<File> mAltDirs = new ArrayList<>();
-
     @Option(name = "successive-boot", description = "Calculate the successive boot delay info")
     private boolean mSuccessiveBoot = false;
 
@@ -753,7 +742,12 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 }
             }
 
-            String perfettoTraceFilePath = processPerfettoFile(testId.replace("$", "_"));
+            String perfettoTraceFilePath =
+                    processPerfettoFile(
+                            String.format(
+                                    "%s_%s",
+                                    successiveBootIterationTestId.getClassName().replace("$", "_"),
+                                    successiveBootIterationTestId.getTestName()));
 
             if (mBootTimePerIteration) {
                 Map<String, String> iterationResult = new HashMap<>();
