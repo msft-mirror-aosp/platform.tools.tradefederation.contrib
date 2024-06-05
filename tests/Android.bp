@@ -13,14 +13,19 @@
 // limitations under the License.
 
 package {
+    default_team: "trendy_team_build",
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
 java_test_host {
     name: "tf-contrib-tests",
-
+    // Nothing should dependent on contrib tests
+    visibility: ["//visibility:private"],
     // Only compile source java files in this lib.
     srcs: ["src/**/*.java"],
+
+    // b/267831518: Pin tradefed and dependencies to Java 11.
+    java_version: "11",
 
     javacflags: [
         "-g",
@@ -33,6 +38,7 @@ java_test_host {
         "easymock",
         "mockito",
         "objenesis",
+        "loganalysis",
     ],
     test_options: {
         unit_test: true,
