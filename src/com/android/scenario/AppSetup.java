@@ -56,7 +56,6 @@ public class AppSetup extends AndroidJUnitTest {
 
     public AppSetup() {
         super();
-        addIncludeAnnotation("android.platform.test.scenario.annotation.AppSetup");
     }
 
     /**
