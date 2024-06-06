@@ -56,6 +56,7 @@ public class CameraPerformanceTest extends CameraTestBase {
     private static final String TEST_CAMERA_LAUNCH = "testCameraLaunch";
     private static final String TEST_SINGLE_CAPTURE = "testSingleCapture";
     private static final String TEST_REPROCESSING_LATENCY = "testReprocessingLatency";
+    private static final String TEST_SINGLE_CAPTURE_JPEG_R = "testSingleCaptureJpegR";
     private static final String TEST_REPROCESSING_THROUGHPUT = "testReprocessingThroughput";
 
     // KPIs to be reported. The key is test methods and the value is KPIs in the method.
@@ -65,6 +66,7 @@ public class CameraPerformanceTest extends CameraTestBase {
                     .put(TEST_CAMERA_LAUNCH, "Camera start preview time")
                     .put(TEST_CAMERA_LAUNCH, "Camera camera close time")
                     .put(TEST_SINGLE_CAPTURE, "Camera capture result latency")
+                    .put(TEST_SINGLE_CAPTURE_JPEG_R, "Camera capture latency jpeg r")
                     .put(TEST_REPROCESSING_LATENCY, "YUV reprocessing shot to shot latency")
                     .put(TEST_REPROCESSING_LATENCY, "opaque reprocessing shot to shot latency")
                     .put(TEST_REPROCESSING_THROUGHPUT, "YUV reprocessing capture latency")
@@ -76,6 +78,7 @@ public class CameraPerformanceTest extends CameraTestBase {
             new ImmutableMap.Builder<String, String>()
                     .put(TEST_CAMERA_LAUNCH, "test_camera_launch")
                     .put(TEST_SINGLE_CAPTURE, "test_single_capture")
+                    .put(TEST_SINGLE_CAPTURE_JPEG_R, "test_single_capture_jpeg_r")
                     .put(TEST_REPROCESSING_LATENCY, "test_reprocessing_latency")
                     .put(TEST_REPROCESSING_THROUGHPUT, "test_reprocessing_throughput")
                     .build();
@@ -568,6 +571,7 @@ public class CameraPerformanceTest extends CameraTestBase {
                             }
                             break;
                         case TEST_SINGLE_CAPTURE:
+                        case TEST_SINGLE_CAPTURE_JPEG_R:
                         case TEST_CAMERA_LAUNCH:
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject element = jsonArray.getJSONObject(i);
