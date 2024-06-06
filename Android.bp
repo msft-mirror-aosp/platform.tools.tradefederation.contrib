@@ -20,9 +20,13 @@ package {
 tradefed_java_library_host {
     name: "tradefed-contrib",
     defaults: ["tradefed_errorprone_defaults"],
-
+    // No extension of contrib is expected, it ships with Tradefed alone
+    visibility: ["//tools/tradefederation/contrib/tests"],
     // Only compile source java files in this lib.
     srcs: ["src/**/*.java"],
+
+    // b/267831518: Pin tradefed and dependencies to Java 11.
+    java_version: "11",
 
     java_resource_dirs: ["res"],
 
