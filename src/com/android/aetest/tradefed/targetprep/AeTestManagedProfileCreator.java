@@ -78,8 +78,10 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
     @Option(
             name = "test-app-file-name",
             description =
-                    "the name of an apk file to be installed in the work profile. Can be repeated.")
-    private List<String> mTestFiles = new ArrayList<>();
+                    "the name of an apk file to be installed in work profile. Can be repeated. Items "
+                            + "that are directories will have any APKs contained therein, "
+                            + "including subdirectories, grouped by package name and installed.")
+    private List<File> mTestFiles = new ArrayList<>();
 
     @Option(
             name = "test-app-alt-dir",
@@ -139,9 +141,13 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
                             "%s was set as profile owner of user %d",
                             mProfileOwnerComponent, mManagedProfileUserId));
         }
+        /*
+        Commenting this out, as the reboot somehow evaporates the permissions granted to
+        managed profile apps during installation. Creation of apps is not being impacted by this.
+        */
         // Reboot device to create the apps in managed profile.
-        device.reboot();
-        device.waitForDeviceAvailable();
+        // device.reboot();
+        // device.waitForDeviceAvailable();
     }
 
     /** {@inheritDoc} */
@@ -163,8 +169,8 @@ public class AeTestManagedProfileCreator extends BaseTargetPreparer implements I
                         mManagedProfileUserId, mTestFiles));
         mInstallPreparer.setUserId(mManagedProfileUserId);
         mInstallPreparer.setShouldGrantPermission(true);
-        for (String file : mTestFiles) {
-            mInstallPreparer.addTestFileName(file);
+        for (File file : mTestFiles) {
+            mInstallPreparer.addTestFile(file);
         }
         for (File dir : mAltTestDirs) {
             mInstallPreparer.setAltDir(dir);
