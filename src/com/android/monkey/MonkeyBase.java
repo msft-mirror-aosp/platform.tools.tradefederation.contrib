@@ -18,13 +18,10 @@ package com.android.monkey;
 
 import com.android.ddmlib.CollectingOutputReceiver;
 import com.android.ddmlib.IShellOutputReceiver;
-import com.android.loganalysis.item.AnrItem;
 import com.android.loganalysis.item.BugreportItem;
 import com.android.loganalysis.item.MiscKernelLogItem;
-import com.android.loganalysis.item.MonkeyLogItem;
 import com.android.loganalysis.parser.BugreportParser;
 import com.android.loganalysis.parser.KernelLogParser;
-import com.android.loganalysis.parser.MonkeyLogParser;
 import com.android.tradefed.config.Option;
 import com.android.tradefed.config.Option.Importance;
 import com.android.tradefed.device.DeviceNotAvailableException;
@@ -56,7 +53,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -183,7 +179,7 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
             description =
                     "How much time to wait between sending successive "
                             + "events, in msecs.  Default is 0ms.")
-    private int mThrottle = 0;
+    private long mThrottle = 0;
 
     @Option(
             name = "ignore-crashes",
@@ -218,11 +214,11 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
     private boolean mUseAllowlistFile = false;
 
     @Option(
-            name = "monkey-timeout",
+            name = "per-event-timeout",
             description =
-                    "How long to wait for the monkey to "
-                            + "complete, in minutes. Default is 4 hours.")
-    private int mMonkeyTimeout = 4 * 60;
+                    "A per event timeout in ms, for determining the total timeout for "
+                            + "monkey run together with throttle and target event injection count.")
+    private long mPerEventTimeout = 100;
 
     @Option(
             name = "warmup-component",
@@ -259,38 +255,8 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
             description = "Enable a continuous circular buffer to collect atrace information")
     private boolean mAtraceEnabled = false;
 
-    // options for generating ANR report via post processing script
-    @Option(name = "generate-anr-report", description = "Generate ANR report via post-processing")
-    private boolean mGenerateAnrReport = false;
-
-    @Option(
-            name = "anr-report-script",
-            description = "Path to the script for monkey ANR " + "report generation.")
-    private String mAnrReportScriptPath = null;
-
-    @Option(
-            name = "anr-report-storage-backend-base-path",
-            description = "Base path to the storage " + "backend used for saving the reports")
-    private String mAnrReportBasePath = null;
-
-    @Option(
-            name = "anr-report-storage-backend-url-prefix",
-            description =
-                    "URL prefix for the "
-                            + "storage backend that would enable web acess to the stored reports.")
-    private String mAnrReportUrlPrefix = null;
-
-    @Option(
-            name = "anr-report-storage-path",
-            description =
-                    "Sub path under the base storage "
-                            + "location for generated monkey ANR reports.")
-    private String mAnrReportPath = null;
-
     private ITestDevice mTestDevice = null;
-    private MonkeyLogItem mMonkeyLog = null;
     private BugreportItem mBugreport = null;
-    private AnrReportGenerator mAnrGen = null;
 
     /** {@inheritDoc} */
     @Override
@@ -327,7 +293,7 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
         return LAUNCH_APP_CMD + extras;
     }
 
-    /** Run the monkey one time and return a {@link MonkeyLogItem} for the run. */
+    /** Run the monkey one time. */
     protected void runMonkey(ITestInvocationListener listener) throws DeviceNotAvailableException {
         ITestDevice device = getDevice();
         if (mRebootDevice) {
@@ -358,7 +324,9 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
 
         // Generate the monkey command to run, given the options
         String command = buildMonkeyCommand();
-        CLog.i("About to run monkey with at %d minute timeout: %s", mMonkeyTimeout, command);
+        CLog.i(
+                "About to run monkey with at %d minute timeout: %s",
+                TimeUnit.MILLISECONDS.toMinutes(getMonkeyTimeoutMs()), command);
 
         StringBuilder outputBuilder = new StringBuilder();
         CommandHelper commandHelper = new CommandHelper();
@@ -379,18 +347,6 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
         // Start atrace before running the monkey command, but after reboot
         if (mAtraceEnabled) {
             CircularAtraceUtil.startTrace(getDevice(), null, 10);
-        }
-
-        if (mGenerateAnrReport) {
-            mAnrGen =
-                    new AnrReportGenerator(
-                            mAnrReportScriptPath,
-                            mAnrReportBasePath,
-                            mAnrReportUrlPrefix,
-                            mAnrReportPath,
-                            mTestDevice.getBuildId(),
-                            mTestDevice.getBuildFlavor(),
-                            mTestDevice.getSerialNumber());
         }
 
         try {
@@ -431,24 +387,13 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
                                 uptimeAfter,
                                 duration / 1000 / 60,
                                 duration / 1000 % 60));
-                mMonkeyLog = createMonkeyLog(listener, MONKEY_LOG_NAME, outputBuilder.toString());
+                listener.testLog(
+                        MONKEY_LOG_NAME,
+                        LogDataType.MONKEY_LOG,
+                        new ByteArrayInputStreamSource(outputBuilder.toString().getBytes()));
 
-                boolean isAnr = mMonkeyLog.getCrash() instanceof AnrItem;
-                if (mAtraceEnabled && isAnr) {
-                    // This was identified as an ANR; post atrace data
+                if (mAtraceEnabled) {
                     listener.testLog("circular-atrace", LogDataType.TEXT, atraceStream);
-                }
-                if (mAnrGen != null) {
-                    if (isAnr) {
-                        if (!mAnrGen.genereateAnrReport(listener)) {
-                            CLog.w("Failed to post-process ANR.");
-                        } else {
-                            CLog.i("Successfully post-processed ANR.");
-                        }
-                        mAnrGen.cleanTempFiles();
-                    } else {
-                        CLog.d("ANR post-processing enabled but no ANR detected.");
-                    }
                 }
                 StreamUtil.cancel(atraceStream);
             }
@@ -476,8 +421,6 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
                 }
             }
         }
-
-        checkResults();
     }
 
     /** A hook to allow subclasses to perform actions just before the monkey starts. */
@@ -520,10 +463,6 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
                 CLog.e("Bugreport has no main file");
                 return null;
             }
-            if (mAnrGen != null) {
-                is = new FileInputStreamSource(main);
-                mAnrGen.setBugReportInfo(is);
-            }
             return new BugreportParser().parse(new BufferedReader(new FileReader(main)));
         } catch (IOException e) {
             CLog.e("Could not process bugreport");
@@ -546,23 +485,6 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
             CLog.e(
                     "Device %s became unresponsive while pulling files",
                     mTestDevice.getSerialNumber());
-        }
-    }
-
-    /** Create the monkey log, parse it, and send it to a listener. */
-    protected MonkeyLogItem createMonkeyLog(
-            ITestInvocationListener listener, String monkeyLogName, String log) {
-        try (InputStreamSource source = new ByteArrayInputStreamSource(log.getBytes())) {
-            if (mAnrGen != null) {
-                mAnrGen.setMonkeyLogInfo(source);
-            }
-            listener.testLog(monkeyLogName, LogDataType.MONKEY_LOG, source);
-            return new MonkeyLogParser()
-                    .parse(new BufferedReader(new InputStreamReader(source.createInputStream())));
-        } catch (IOException e) {
-            CLog.e("Could not process monkey log.");
-            CLog.e(e);
-            return null;
         }
     }
 
@@ -597,7 +519,7 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
 
         if (mThrottle >= 1) {
             cmdList.add("--throttle");
-            cmdList.add(Integer.toString(mThrottle));
+            cmdList.add(Long.toString(mThrottle));
         }
         if (mIgnoreCrashes) {
             cmdList.add("--ignore-crashes");
@@ -709,45 +631,8 @@ public class MonkeyBase implements IDeviceTest, IRemoteTest {
         return mTestDevice;
     }
 
-    /** Check the results and return if valid or throw an assertion error if not valid. */
-    private void checkResults() {
-        Assert.assertNotNull("Monkey log is null", mMonkeyLog);
-        Assert.assertNotNull("Bugreport is null", mBugreport);
-        Assert.assertNotNull("Bugreport is empty", mBugreport.getTime());
-
-        // If there are no activities, retrying the test won't matter.
-        if (mMonkeyLog.getNoActivities()) {
-            return;
-        }
-
-        Assert.assertNotNull("Start uptime is missing", mMonkeyLog.getStartUptimeDuration());
-        Assert.assertNotNull("Stop uptime is missing", mMonkeyLog.getStopUptimeDuration());
-        Assert.assertNotNull("Total duration is missing", mMonkeyLog.getTotalDuration());
-
-        long startUptime = mMonkeyLog.getStartUptimeDuration();
-        long stopUptime = mMonkeyLog.getStopUptimeDuration();
-        long totalDuration = mMonkeyLog.getTotalDuration();
-
-        Assert.assertTrue(
-                "Uptime failure", stopUptime - startUptime > totalDuration - UPTIME_BUFFER);
-
-        // False count
-        Assert.assertFalse(
-                "False count",
-                mMonkeyLog.getIsFinished()
-                        && mMonkeyLog.getTargetCount() - mMonkeyLog.getIntermediateCount() > 100);
-
-        // Monkey finished or crashed, so don't fail
-        if (mMonkeyLog.getIsFinished() || mMonkeyLog.getFinalCount() != null) {
-            return;
-        }
-
-        // Missing count
-        Assert.fail("Missing count");
-    }
-
     /** Get the monkey timeout in milliseconds */
     protected long getMonkeyTimeoutMs() {
-        return mMonkeyTimeout * 60 * 1000;
+        return (mPerEventTimeout + mThrottle) * mTargetCount;
     }
 }
