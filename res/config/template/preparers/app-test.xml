@@ -7,4 +7,5 @@
     <include name="template/preparers/perfetto" />
     <include name="template/preparers/app-install" />
     <include name="template/preparers/run-command" />
+    <include name="template/preparers/boot-image-speed" />
 </configuration>
