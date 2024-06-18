@@ -788,116 +788,52 @@ public class BootTimeTest extends InstalledInstrumentationsTest
     /** Get the logcat statistics info */
     private Map<String, String> collectLogcatInfo() throws DeviceNotAvailableException {
         Map<String, String> results = new HashMap<>();
-
         // Parse logcat in global level
-        results.putAll(extractLogcatInfo(-1, "general"));
-
-        // Get all the process PIDs first
-        Map<Integer, String> pids = getPids();
-        if (pids.size() == 0) {
-            CLog.e("Failed to get all the valid process PIDs");
-            return results;
-        }
-        // Parse logcat in process level
-        for (Map.Entry<Integer, String> process : pids.entrySet()) {
-            results.putAll(extractLogcatInfo(process.getKey(), process.getValue()));
-        }
-
+        results.putAll(extractLogcatInfo("general"));
         return results;
     }
 
-    /** Get pid of all processes */
-    private Map<Integer, String> getPids() throws DeviceNotAvailableException {
-        // return pids
-        Map<Integer, String> pids = new HashMap<>();
-        String pidOutput = getDevice().executeShellCommand(ALL_PROCESS_CMD);
-        // Sample output for the process info
-        // Sample command : "ps -A"
-        // Sample output :
-        // system   4533   410 13715708 78536 do_freezer_trap 0 S    com.android.keychain
-        // root    32552     2        0     0   worker_thread 0 I [kworker/6:0-memlat_wq]
-        String[] lines = pidOutput.split(System.lineSeparator());
-        for (String line : lines) {
-            String[] splitLine = line.split("\\s+");
-            // Skip the first (i.e header) line from "ps -A" output.
-            if (splitLine[1].equalsIgnoreCase("PID")) {
-                continue;
-            }
-            String processName = splitLine[splitLine.length - 1].replace("\n", "").trim();
-            pids.put(Integer.parseInt(splitLine[1]), processName);
-        }
-        return pids;
-    }
-
     /** Get the logcat statistics info */
-    private Map<String, String> extractLogcatInfo(int pid, String processName)
+    private Map<String, String> extractLogcatInfo(String processName)
             throws DeviceNotAvailableException {
         Map<String, String> results = new HashMap<>();
-        String runCommand =
-                pid == -1 ? LOGCAT_CMD_STATISTICS_ALL : String.format(LOGCAT_CMD_STATISTICS, pid);
+        String runCommand = LOGCAT_CMD_STATISTICS_ALL;
         String output = getDevice().executeShellCommand(runCommand);
         String[] outputList = output.split("\\n\\n");
 
-        if (pid == -1) {
-            // General statistics
-            // Sample output for $ logcat --statistics
-            // size/num main         system          crash           kernel   Total
-            // Total    33/23        96/91           3870/4          70/1     513/41
-            // Now      92/70        4/15            0/0             13/11    33/26
-            // Logspan  5:15:15.15   11d 20:37:31.37 13:20:54.185    11d 20:40:06.816
-            // Overhead 253454       56415               255139      1330477
-            Matcher matcherHeader = LOGCAT_STATISTICS_HEADER_PATTERN.matcher(outputList[0]);
-            Matcher matcherTotal = LOGCAT_STATISTICS_TOTAL_PATTERN.matcher(outputList[0]);
-            Matcher matcherNow = LOGCAT_STATISTICS_NOW_PATTERN.matcher(outputList[0]);
-            boolean headerFound = matcherHeader.find();
-            boolean totalFound = matcherTotal.find();
-            boolean nowFound = matcherNow.find();
-            if (headerFound && totalFound && nowFound) {
-                // There are 6 columns in the output, but we just want to extract column 1 to 4
-                for (int i = 1; i < 5; i++) {
-                    String bufferHeader = matcherHeader.group(i).trim();
-                    results.put(
-                            String.join(
-                                    METRIC_KEY_SEPARATOR,
-                                    LOGCAT_STATISTICS_SIZE,
-                                    bufferHeader,
-                                    processName),
-                            matcherTotal.group(i * 2 - 1).trim());
-                    results.put(
-                            String.join(
-                                    METRIC_KEY_SEPARATOR,
-                                    LOGCAT_STATISTICS_DIFF_SIZE,
-                                    bufferHeader,
-                                    processName),
-                            Integer.toString(
-                                    Integer.valueOf(matcherTotal.group(i * 2 - 1).trim())
-                                            - Integer.valueOf(matcherNow.group(i * 2 - 1).trim())));
-                }
-            }
-        } else if (outputList.length > 1) {
-            // Process statistics
-            // Sample output for $ logcat --statistics --pid 3330
-            // Logging for this PID:                                        Size        Pruned
-            //  PID/UID   COMMAND LINE                                    BYTES           NUM
-            // 3330/10171 ...ogle.android.googlequicksearchbox:interactor 13024
-            boolean pidFound = false;
-            for (int i = 0; i < outputList.length; i++) {
-                Matcher matcherPid = LOGCAT_STATISTICS_PID_PATTERN.matcher(outputList[i]);
-                pidFound = matcherPid.find();
-                if (!pidFound) continue;
-                CLog.d(
-                        "Process %s with pid %d : logcat statistics output = %s",
-                        processName, pid, outputList[i]);
+        // General statistics
+        // Sample output for $ logcat --statistics
+        // size/num main         system          crash           kernel   Total
+        // Total    33/23        96/91           3870/4          70/1     513/41
+        // Now      92/70        4/15            0/0             13/11    33/26
+        // Logspan  5:15:15.15   11d 20:37:31.37 13:20:54.185    11d 20:40:06.816
+        // Overhead 253454       56415               255139      1330477
+        Matcher matcherHeader = LOGCAT_STATISTICS_HEADER_PATTERN.matcher(outputList[0]);
+        Matcher matcherTotal = LOGCAT_STATISTICS_TOTAL_PATTERN.matcher(outputList[0]);
+        Matcher matcherNow = LOGCAT_STATISTICS_NOW_PATTERN.matcher(outputList[0]);
+        boolean headerFound = matcherHeader.find();
+        boolean totalFound = matcherTotal.find();
+        boolean nowFound = matcherNow.find();
+        if (headerFound && totalFound && nowFound) {
+            // There are 6 columns in the output, but we just want to extract column 1 to 4
+            for (int i = 1; i < 5; i++) {
+                String bufferHeader = matcherHeader.group(i).trim();
                 results.put(
-                        String.join(METRIC_KEY_SEPARATOR, LOGCAT_STATISTICS_SIZE, processName),
-                        matcherPid.group(1).trim());
-                break;
-            }
-            if (!pidFound) {
-                // the process doesn't found in the logcat statistics output
-                CLog.d(
-                        "Process %s with pid %d doesn't exist in logcat statistics.",
-                        processName, pid);
+                        String.join(
+                                METRIC_KEY_SEPARATOR,
+                                LOGCAT_STATISTICS_SIZE,
+                                bufferHeader,
+                                processName),
+                        matcherTotal.group(i * 2 - 1).trim());
+                results.put(
+                        String.join(
+                                METRIC_KEY_SEPARATOR,
+                                LOGCAT_STATISTICS_DIFF_SIZE,
+                                bufferHeader,
+                                processName),
+                        Integer.toString(
+                                Integer.valueOf(matcherTotal.group(i * 2 - 1).trim())
+                                        - Integer.valueOf(matcherNow.group(i * 2 - 1).trim())));
             }
         }
         return results;
