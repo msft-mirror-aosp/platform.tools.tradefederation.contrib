@@ -57,7 +57,7 @@ public class EmmcPerformanceTest implements IDeviceTest, IRemoteTest {
     private static final String SEQUENTIAL_WRITE_KEY = "sequential_write";
     private static final String RANDOM_READ_KEY = "random_read";
     private static final String RANDOM_WRITE_KEY = "random_write";
-    private static final String PERF_RANDOM = "/data/local/tmp/rand_emmc_perf|#ABI32#|";
+    private static final String PERF_RANDOM = "/system/bin/rand_emmc_perf|#ABI32#|";
 
     private static final Pattern DD_PATTERN =
             Pattern.compile("\\d+ bytes transferred in \\d+\\.\\d+ secs \\((\\d+) bytes/sec\\)");
