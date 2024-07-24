@@ -109,7 +109,7 @@ public class BootTimeTest extends InstalledInstrumentationsTest
     private static final String LOGCAT_FILE = "Successive_reboots_logcat";
     private static final String LOGCAT_UNLOCK_FILE = "Successive_reboots_unlock_logcat";
     private static final String BOOT_COMPLETE_ACTION = "sys.boot_completed=1";
-    private static final String RUNNER = "android.support.test.runner.AndroidJUnitRunner";
+    private static final String RUNNER = "androidx.test.runner.AndroidJUnitRunner";
     private static final String PACKAGE_NAME = "com.android.boothelper";
     private static final String CLASS_NAME = "com.android.boothelper.BootHelperTest";
     private static final String SETUP_PIN_TEST = "setupLockScreenPin";
@@ -192,6 +192,8 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                     "Logging for this PID.*\\s+([0-9]+)$",
                     Pattern.CASE_INSENSITIVE | Pattern.MULTILINE | Pattern.DOTALL);
 
+    private static final String METRIC_COUNT = "MetricCount";
+
     @Option(name = "test-run-name", description = "run name to report to result reporters")
     private String mTestRunName = BOOTTIME_TEST;
 
@@ -217,17 +219,6 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             importance = Importance.IF_UNSET)
     private List<File> mTestFileNames = new ArrayList<>();
 
-    @Option(
-            name = "alt-dir",
-            description =
-                    "Alternate directory to look for the apk if the apk is not in the tests zip"
-                            + " file. For each alternate dir, will look in //, //data/app, "
-                            + "//DATA/app,"
-                            + " //DATA/app/apk_name/ and //DATA/priv-app/apk_name/. Can be "
-                            + "repeated."
-                            + " Look for apks in last alt-dir first.")
-    private List<File> mAltDirs = new ArrayList<>();
-
     @Option(name = "successive-boot", description = "Calculate the successive boot delay info")
     private boolean mSuccessiveBoot = false;
 
@@ -243,6 +234,12 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             isTimeVal = true,
             description = "Time to wait between the successive boots.")
     private long mBootDelayTime = 2000;
+
+    @Option(
+            name = "after-boot-delay",
+            isTimeVal = true,
+            description = "Time to wait immediately after the successive boots.")
+    private long mAfterBootDelayTime = 0;
 
     @Option(
             name = "post-initial-boot-idle",
@@ -334,6 +331,13 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             description = "Run logcat --statistics command and collect data")
     private boolean mCollectLogcat = false;
 
+    @Option(
+            name = "metric-prefix-pattern-for-count",
+            description =
+                    "A list of metric prefix pattern that will be used to count number of metrics"
+                            + " generated in the test")
+    private List<String> mMetricPrefixPatternForCount = new ArrayList<>();
+
     private IBuildInfo mBuildInfo;
     private IConfiguration mConfiguration;
     private TestInformation mTestInfo;
@@ -412,6 +416,9 @@ public class BootTimeTest extends InstalledInstrumentationsTest
         mTestInfo = testInfo;
         long start = System.currentTimeMillis();
         listener.testRunStarted(mTestRunName, 1);
+        for (IMetricCollector collector : mCollectors) {
+            listener = collector.init(mInvocationContext, listener);
+        }
         try {
             try {
                 // Set the current date from the host in test device.
@@ -487,10 +494,13 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                         }
                         testSuccessiveBoots(true, listener);
                     } finally {
-                        try (InputStreamSource logcatData = mRebootLogcatReceiver.getLogcatData()) {
-                            listener.testLog(LOGCAT_UNLOCK_FILE, LogDataType.TEXT, logcatData);
+                        if (null != mRebootLogcatReceiver) {
+                            try (InputStreamSource logcatData =
+                                    mRebootLogcatReceiver.getLogcatData()) {
+                                listener.testLog(LOGCAT_UNLOCK_FILE, LogDataType.TEXT, logcatData);
+                            }
+                            mRebootLogcatReceiver.stop();
                         }
-                        mRebootLogcatReceiver.stop();
                         listener.testStarted(successiveBootUnlockTestId);
                         listener.testEnded(successiveBootUnlockTestId, successiveBootUnlockResult);
                     }
@@ -598,9 +608,6 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             throws DeviceNotAvailableException {
         CLog.v("Waiting for %d msecs before successive boots.", mBootDelayTime);
         getRunUtil().sleep(mBootDelayTime);
-        for (IMetricCollector collector : mCollectors) {
-            listener = collector.init(mInvocationContext, listener);
-        }
         for (int count = 0; count < mBootCount; count++) {
             getDevice().enableAdbRoot();
             // Property used for collecting the perfetto trace file on boot.
@@ -620,10 +627,14 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             double onlineTime = INVALID_TIME_DURATION;
             double bootTime = INVALID_TIME_DURATION;
             String testId = String.format("%s.%s$%d", BOOTTIME_TEST, BOOTTIME_TEST, (count + 1));
-            TestDescription successiveBootIterationTestId =
-                    new TestDescription(testId, String.format("%s", SUCCESSIVE_BOOT_TEST));
-            if (mBootTimePerIteration) {
-                listener.testStarted(successiveBootIterationTestId);
+            TestDescription successiveBootIterationTestId;
+            if (!dismissPin) {
+                successiveBootIterationTestId =
+                        new TestDescription(testId, String.format("%s", SUCCESSIVE_BOOT_TEST));
+            } else {
+                successiveBootIterationTestId =
+                        new TestDescription(
+                                testId, String.format("%s", SUCCESSIVE_BOOT_UNLOCK_TEST));
             }
             if (mGranularBootInfo || dismissPin) {
                 clearAndStartLogcat();
@@ -677,12 +688,17 @@ public class BootTimeTest extends InstalledInstrumentationsTest
             if (mBootloaderInfo) analyzeBootloaderTimingInfo();
 
             if (dismissPin) {
+                getRunUtil().sleep(2000);
                 mRunner = createRemoteAndroidTestRunner(UNLOCK_PIN_TEST);
                 getDevice().runInstrumentationTests(mRunner, new CollectingTestListener());
-                // Wait for 15 secs after every unlock to make sure home screen is loaded
-                // and logs are printed
-                getRunUtil().sleep(15000);
             }
+
+            if (mBootTimePerIteration) {
+                listener.testStarted(successiveBootIterationTestId);
+            }
+
+            CLog.v("Waiting for %d msecs immediately after successive boot.", mAfterBootDelayTime);
+            getRunUtil().sleep(mAfterBootDelayTime);
             if (onlineTime != INVALID_TIME_DURATION) {
                 if (mBootInfo.containsKey(SUCCESSIVE_ONLINE)) {
                     mBootInfo.get(SUCCESSIVE_ONLINE).add(onlineTime);
@@ -726,7 +742,12 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 }
             }
 
-            String perfettoTraceFilePath = processPerfettoFile(testId.replace("$", "_"));
+            String perfettoTraceFilePath =
+                    processPerfettoFile(
+                            String.format(
+                                    "%s_%s",
+                                    successiveBootIterationTestId.getClassName().replace("$", "_"),
+                                    successiveBootIterationTestId.getTestName()));
 
             if (mBootTimePerIteration) {
                 Map<String, String> iterationResult = new HashMap<>();
@@ -738,6 +759,22 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 }
                 if (!collectLogcatInfoResult.isEmpty()) {
                     iterationResult.putAll(collectLogcatInfoResult);
+                }
+                // If  metric-prefix-pattern-for-count is present, calculate the count
+                // of all metrics with the prefix pattern and add the count as a new metric to the
+                // iterationResult map.
+                if (!mMetricPrefixPatternForCount.isEmpty()) {
+                    for (String metricPrefixPattern : mMetricPrefixPatternForCount) {
+                        long metricCount =
+                                iterationResult.entrySet().stream()
+                                        .filter(
+                                                (entry) ->
+                                                        entry.getKey()
+                                                                .startsWith(metricPrefixPattern))
+                                        .count();
+                        iterationResult.put(
+                                metricPrefixPattern + METRIC_COUNT, Long.toString(metricCount));
+                    }
                 }
                 listener.testEnded(successiveBootIterationTestId, iterationResult);
             }
@@ -848,10 +885,13 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                 Matcher matcherPid = LOGCAT_STATISTICS_PID_PATTERN.matcher(outputList[i]);
                 pidFound = matcherPid.find();
                 if (!pidFound) continue;
-                CLog.d("logcat statistics pid %d output = %s", pid, outputList[i]);
+                CLog.d(
+                        "Process %s with pid %d : logcat statistics output = %s",
+                        processName, pid, outputList[i]);
                 results.put(
                         String.join(METRIC_KEY_SEPARATOR, LOGCAT_STATISTICS_SIZE, processName),
                         matcherPid.group(1).trim());
+                break;
             }
             if (!pidFound) {
                 // the process doesn't found in the logcat statistics output
@@ -860,7 +900,6 @@ public class BootTimeTest extends InstalledInstrumentationsTest
                         processName, pid);
             }
         }
-
         return results;
     }
 
