@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -21,7 +20,10 @@ tradefed_java_library_host {
     name: "tradefed-contrib",
     defaults: ["tradefed_errorprone_defaults"],
     // No extension of contrib is expected, it ships with Tradefed alone
-    visibility: ["//tools/tradefederation/contrib/tests"],
+    visibility: [
+        "//tools/tradefederation/contrib/tests",
+        "//tools/tradefederation/core",
+    ],
     // Only compile source java files in this lib.
     srcs: ["src/**/*.java"],
 
